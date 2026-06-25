@@ -23,6 +23,13 @@ mpv_debug.log
 *.sw?
 .vs/
 
+# Project State
+.project_state
+project_state
+*.state
+.cursor/
+.cursorrules
+
 # OS files
 Thumbs.db
 db.db
