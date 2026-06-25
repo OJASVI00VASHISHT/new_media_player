@@ -22,6 +22,7 @@ import {
   showMediaInfo,
   changeTheme,
   changeVolumeByDelta,
+  changeZoomByDelta,
   isImage,
   isGif
 } from './player.js';
@@ -33,6 +34,16 @@ initWindowControls();
 
 // ── Open File Button ──────────────────────────────────────────
 document.getElementById('btn-open').addEventListener('click', openFileDialog);
+
+document.addEventListener('wheel', async (e) => {
+  if (e.ctrlKey) {
+    e.preventDefault();
+    // deltaY is negative when scrolling up (zooming in), positive when scrolling down (zooming out)
+    // A standard mouse wheel 'click' is typically 100 or 120. Trackpad values can be smaller.
+    const zoomStep = e.deltaY < 0 ? 15 : -15;
+    await changeZoomByDelta(zoomStep);
+  }
+}, { passive: false });
 
 // ── Play / Pause ──────────────────────────────────────────────
 document.getElementById('btn-play-pause').addEventListener('click', togglePlayPause);
@@ -111,6 +122,14 @@ document.addEventListener('keydown', async (e) => {
       } else {
         await seekRelative(e.shiftKey ? 30 : 5);
       }
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      await changeVolumeByDelta(10);
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      await changeVolumeByDelta(-10);
       break;
     case 'f':
     case 'F11':

@@ -881,3 +881,7 @@ body.theme-emerald {
   --grad:         linear-gradient(135deg, var(--violet), var(--cyan));
   --ctrl-active:  rgba(5, 150, 105, 0.35);
 }
+
+/* Panning Cursors */
+.can-pan { cursor: grab !important; }
+.is-panning { cursor: grabbing !important; }

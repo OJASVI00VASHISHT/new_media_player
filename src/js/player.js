@@ -22,6 +22,13 @@ let premuteVolume  = 75;  // saved before mute
 let isImage = false;
 let isGif = false;
 
+// Pan state
+let isPanning = false;
+let startX = 0;
+let startY = 0;
+let alignX = 0;
+let alignY = 0;
+
 // ── DOM Refs ─────────────────────────────────────────────────
 const dropZone       = document.getElementById('drop-zone');
 const mpvContainer   = document.getElementById('mpv-container');
@@ -77,7 +84,7 @@ export const volumeBar = new VolumeBar({
 // Set initial display
 volumeBar.setValue(currentVolume);
 
-// ── Zoom Bar ─────────────────────────────────────────────────
+// ── Zoom Bar & Panning ───────────────────────────────────────
 let currentZoom = 100;
 
 export const zoomBar = new ZoomBar({
@@ -89,19 +96,77 @@ export const zoomBar = new ZoomBar({
       currentZoom = zoom;
       const zoomLog2 = Math.log2(zoom / 100).toString();
       await invoke('set_mpv_property', { name: 'video-zoom', value: zoomLog2 });
+      if (zoom === 100) {
+         mpvContainer.classList.remove('can-pan');
+      } else {
+         mpvContainer.classList.add('can-pan');
+      }
     } catch (e) { console.error('zoom error', e); }
   }
 });
 zoomBar.setValue(currentZoom);
 
+export async function changeZoomByDelta(delta) {
+  const target = Math.max(50, Math.min(500, currentZoom + delta));
+  zoomBar.setValue(target);
+  zoomBar.onZoom(target);
+}
+
 const btnZoomIcon = document.getElementById('btn-zoom-icon');
 if (btnZoomIcon) {
   btnZoomIcon.addEventListener('click', async () => {
     currentZoom = 100;
+    alignX = 0;
+    alignY = 0;
     zoomBar.setValue(currentZoom);
     try {
       await invoke('set_mpv_property', { name: 'video-zoom', value: '0' });
+      await invoke('set_mpv_property', { name: 'video-align-x', value: '0' });
+      await invoke('set_mpv_property', { name: 'video-align-y', value: '0' });
+      mpvContainer.classList.remove('can-pan');
     } catch (e) {}
+  });
+}
+
+// Mouse events for panning
+if (mpvContainer) {
+  mpvContainer.addEventListener('mousedown', (e) => {
+    if (currentZoom > 100 && (isImage || isGif || isPlaying)) {
+      isPanning = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      mpvContainer.classList.add('is-panning');
+      e.preventDefault(); // Prevent default text selection
+    }
+  });
+
+  document.addEventListener('mousemove', async (e) => {
+    if (isPanning) {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      startX = e.clientX;
+      startY = e.clientY;
+      
+      // video-align ranges from -1 to 1. Adjust sensitivity as needed
+      // Negative dx means moving mouse left, which means we want to see more of the right side -> alignX increases
+      alignX += dx * 0.005;
+      alignY += dy * 0.005;
+      
+      alignX = Math.max(-1, Math.min(1, alignX));
+      alignY = Math.max(-1, Math.min(1, alignY));
+      
+      try {
+        await invoke('set_mpv_property', { name: 'video-align-x', value: alignX.toString() });
+        await invoke('set_mpv_property', { name: 'video-align-y', value: alignY.toString() });
+      } catch (_) {}
+    }
+  });
+
+  document.addEventListener('mouseup', () => {
+    if (isPanning) {
+      isPanning = false;
+      mpvContainer.classList.remove('is-panning');
+    }
   });
 }
 
@@ -243,10 +308,15 @@ export async function loadFile(path) {
     duration = snap.duration || 0;
     timeTotal.textContent = formatTime(duration);
     
-    // Reset zoom
+    // Reset zoom and pan
     currentZoom = 100;
+    alignX = 0;
+    alignY = 0;
     zoomBar.setValue(currentZoom);
+    mpvContainer.classList.remove('can-pan');
     await invoke('set_mpv_property', { name: 'video-zoom', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-align-x', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-align-y', value: '0' });
 
     updatePlaylistUI(snap);
     startPolling();
@@ -441,4 +511,4 @@ export async function changeVolumeByDelta(delta) {
   }
 }
 
-export { setPlaying, isPlaying, duration, isImage, isGif };
+export { setPlaying, isPlaying, duration, isImage, isGif, changeZoomByDelta };
