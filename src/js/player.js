@@ -26,8 +26,8 @@ let isGif = false;
 let isPanning = false;
 let startX = 0;
 let startY = 0;
-let alignX = 0;
-let alignY = 0;
+let panX = 0;
+let panY = 0;
 
 // ── DOM Refs ─────────────────────────────────────────────────
 const dropZone       = document.getElementById('drop-zone');
@@ -116,13 +116,13 @@ const btnZoomIcon = document.getElementById('btn-zoom-icon');
 if (btnZoomIcon) {
   btnZoomIcon.addEventListener('click', async () => {
     currentZoom = 100;
-    alignX = 0;
-    alignY = 0;
+    panX = 0;
+    panY = 0;
     zoomBar.setValue(currentZoom);
     try {
       await invoke('set_mpv_property', { name: 'video-zoom', value: '0' });
-      await invoke('set_mpv_property', { name: 'video-align-x', value: '0' });
-      await invoke('set_mpv_property', { name: 'video-align-y', value: '0' });
+      await invoke('set_mpv_property', { name: 'video-pan-x', value: '0' });
+      await invoke('set_mpv_property', { name: 'video-pan-y', value: '0' });
       mpvContainer.classList.remove('can-pan');
     } catch (e) {}
   });
@@ -147,17 +147,15 @@ if (mpvContainer) {
       startX = e.clientX;
       startY = e.clientY;
       
-      // video-align ranges from -1 to 1. Adjust sensitivity as needed
-      // Negative dx means moving mouse left, which means we want to see more of the right side -> alignX increases
-      alignX += dx * 0.005;
-      alignY -= dy * 0.005;
-      
-      alignX = Math.max(-1, Math.min(1, alignX));
-      alignY = Math.max(-1, Math.min(1, alignY));
+      // video-pan-x/y uses fractions of the scaled video dimension. 
+      // This formula approximates a 1:1 pixel mapping with the mouse cursor.
+      const zoomFactor = currentZoom / 100;
+      panX += dx / (window.innerWidth * zoomFactor);
+      panY += dy / (window.innerHeight * zoomFactor);
       
       try {
-        await invoke('set_mpv_property', { name: 'video-align-x', value: alignX.toString() });
-        await invoke('set_mpv_property', { name: 'video-align-y', value: alignY.toString() });
+        await invoke('set_mpv_property', { name: 'video-pan-x', value: panX.toString() });
+        await invoke('set_mpv_property', { name: 'video-pan-y', value: panY.toString() });
       } catch (_) {}
     }
   });
@@ -310,13 +308,13 @@ export async function loadFile(path) {
     
     // Reset zoom and pan
     currentZoom = 100;
-    alignX = 0;
-    alignY = 0;
+    panX = 0;
+    panY = 0;
     zoomBar.setValue(currentZoom);
     mpvContainer.classList.remove('can-pan');
     await invoke('set_mpv_property', { name: 'video-zoom', value: '0' });
-    await invoke('set_mpv_property', { name: 'video-align-x', value: '0' });
-    await invoke('set_mpv_property', { name: 'video-align-y', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-pan-x', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-pan-y', value: '0' });
 
     updatePlaylistUI(snap);
     startPolling();
