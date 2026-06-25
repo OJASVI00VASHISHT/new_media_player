@@ -1,0 +1,22 @@
+[[permission]]
+identifier = "allow-nova-player-commands"
+description = "Allow access to all Nova Player custom commands"
+
+[permission.commands]
+allow = [
+  "open_file",
+  "play",
+  "pause",
+  "toggle_play_pause",
+  "seek",
+  "set_volume",
+  "get_position",
+  "get_duration",
+  "get_state",
+  "stop",
+  "set_fullscreen",
+  "next_video",
+  "previous_video",
+  "set_speed",
+  "get_startup_file"
+]

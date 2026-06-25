@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="Nova Player — A modern, beautiful media player for Windows" />
+  <title>Nova Player</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+  <script>
+    (function() {
+      const originalLog = console.log;
+      const originalError = console.error;
+      
+      console.log = function(...args) {
+        originalLog.apply(console, args);
+        try {
+          const msg = args.map(arg => {
+            if (arg === null) return 'null';
+            if (arg === undefined) return 'undefined';
+            return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+          }).join(' ');
+          if (window.__TAURI__ && window.__TAURI__.core) {
+            window.__TAURI__.core.invoke('log_from_frontend', { level: 'INFO', message: msg }).catch(() => {});
+          }
+        } catch (e) {
+          originalError.call(console, 'logger error', e);
+        }
+      };
+      
+      console.error = function(...args) {
+        originalError.apply(console, args);
+        try {
+          const msg = args.map(arg => {
+            if (arg === null) return 'null';
+            if (arg === undefined) return 'undefined';
+            return typeof arg === 'object' ? JSON.stringify(arg) : String(arg);
+          }).join(' ');
+          if (window.__TAURI__ && window.__TAURI__.core) {
+            window.__TAURI__.core.invoke('log_from_frontend', { level: 'ERROR', message: msg }).catch(() => {});
+          }
+        } catch (e) {
+          originalError.call(console, 'logger error', e);
+        }
+      };
+      
+      window.addEventListener('error', function(event) {
+        try {
+          const msg = event.message + ' at ' + event.filename + ':' + event.lineno + ':' + event.colno;
+          if (window.__TAURI__ && window.__TAURI__.core) {
+            window.__TAURI__.core.invoke('log_from_frontend', { level: 'FATAL_UNCAUGHT', message: msg }).catch(() => {});
+          }
+        } catch (e) {}
+      });
+      
+      window.addEventListener('unhandledrejection', function(event) {
+        try {
+          const msg = 'Unhandled Rejection: ' + (event.reason && event.reason.message || String(event.reason));
+          if (window.__TAURI__ && window.__TAURI__.core) {
+            window.__TAURI__.core.invoke('log_from_frontend', { level: 'FATAL_PROMISE', message: msg }).catch(() => {});
+          }
+        } catch (e) {}
+      });
+    })();
+  </script>
+</head>
+<body>
+
+  <!-- Custom Title Bar -->
+  <div id="title-bar" data-tauri-drag-region>
+    <div class="title-bar-left" data-tauri-drag-region>
+      <div class="app-logo">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none">
+          <defs>
+            <linearGradient id="logoGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#7C3AED"/>
+              <stop offset="100%" stop-color="#06B6D4"/>
+            </linearGradient>
+          </defs>
+          <path d="M4 4L4 20M4 4L12 12M4 20L12 12M12 12L20 4M20 4L20 20" 
+                stroke="url(#logoGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+      </div>
+      <span class="app-title">Nova Player</span>
+
+      <!-- Top Menu Bar -->
+      <nav class="top-menu-bar" id="top-menu-bar">
+        <div class="menu-trigger-container">
+          <button class="menu-trigger" data-menu="media">Media</button>
+          <div class="menu-dropdown hidden" id="dropdown-media">
+            <div class="menu-item" id="menu-media-open"><span class="menu-icon">📂</span><span class="menu-text">Open File...</span><span class="menu-shortcut">Ctrl+O</span></div>
+            <div class="menu-item" id="menu-media-close"><span class="menu-icon">❌</span><span class="menu-text">Close Media</span></div>
+            <div class="menu-divider"></div>
+            <div class="menu-item" id="menu-media-exit"><span class="menu-icon">🚪</span><span class="menu-text">Exit</span></div>
+          </div>
+        </div>
+        <div class="menu-trigger-container">
+          <button class="menu-trigger" data-menu="playback">Playback</button>
+          <div class="menu-dropdown hidden" id="dropdown-playback">
+            <div class="menu-item" id="menu-playback-play"><span class="menu-icon">▶</span><span class="menu-text">Play / Pause</span><span class="menu-shortcut">Space</span></div>
+            <div class="menu-item" id="menu-playback-stop"><span class="menu-icon">■</span><span class="menu-text">Stop</span></div>
+            <div class="menu-divider"></div>
+            <div class="menu-item-parent">
+              <div class="menu-item">
+                <span class="menu-icon">⚡</span>
+                <span class="menu-text">Speed</span>
+                <span class="menu-arrow">▶</span>
+              </div>
+              <div class="menu-submenu">
+                <div class="menu-item" id="menu-speed-05">0.5x</div>
+                <div class="menu-item" id="menu-speed-075">0.75x</div>
+                <div class="menu-item" id="menu-speed-10">1.0x (Normal)</div>
+                <div class="menu-item" id="menu-speed-15">1.5x</div>
+                <div class="menu-item" id="menu-speed-20">2.0x</div>
+              </div>
+            </div>
+            <div class="menu-divider"></div>
+            <div class="menu-item" id="menu-playback-forward"><span class="menu-icon">⏩</span><span class="menu-text">Skip Forward 5s</span><span class="menu-shortcut">→</span></div>
+            <div class="menu-item" id="menu-playback-backward"><span class="menu-icon">⏪</span><span class="menu-text">Skip Backward 5s</span><span class="menu-shortcut">←</span></div>
+          </div>
+        </div>
+        <div class="menu-trigger-container">
+          <button class="menu-trigger" data-menu="audio">Audio</button>
+          <div class="menu-dropdown hidden" id="dropdown-audio">
+            <div class="menu-item" id="menu-audio-mute"><span class="menu-icon">🔇</span><span class="menu-text">Mute / Unmute</span><span class="menu-shortcut">M</span></div>
+            <div class="menu-item" id="menu-audio-volup"><span class="menu-icon">🔊</span><span class="menu-text">Volume +10%</span></div>
+            <div class="menu-item" id="menu-audio-voldown"><span class="menu-icon">🔉</span><span class="menu-text">Volume -10%</span></div>
+          </div>
+        </div>
+        <div class="menu-trigger-container">
+          <button class="menu-trigger" data-menu="video">Video</button>
+          <div class="menu-dropdown hidden" id="dropdown-video">
+            <div class="menu-item" id="menu-video-fs"><span class="menu-icon">⛶</span><span class="menu-text">Toggle Fullscreen</span><span class="menu-shortcut">F</span></div>
+            <div class="menu-divider"></div>
+            <div class="menu-item-parent">
+              <div class="menu-item">
+                <span class="menu-icon">📐</span>
+                <span class="menu-text">Aspect Ratio</span>
+                <span class="menu-arrow">▶</span>
+              </div>
+              <div class="menu-submenu">
+                <div class="menu-item" id="menu-aspect-default">Default</div>
+                <div class="menu-item" id="menu-aspect-169">16:9</div>
+                <div class="menu-item" id="menu-aspect-43">4:3</div>
+                <div class="menu-item" id="menu-aspect-235">2.35:1</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="menu-trigger-container">
+          <button class="menu-trigger" data-menu="subtitle">Subtitle</button>
+          <div class="menu-dropdown hidden" id="dropdown-subtitle">
+            <div class="menu-item-parent">
+              <div class="menu-item">
+                <span class="menu-icon">📝</span>
+                <span class="menu-text">Subtitle Size</span>
+                <span class="menu-arrow">▶</span>
+              </div>
+              <div class="menu-submenu">
+                <div class="menu-item" id="menu-sub-small">Smaller</div>
+                <div class="menu-item" id="menu-sub-normal">Normal</div>
+                <div class="menu-item" id="menu-sub-large">Larger</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="menu-trigger-container">
+          <button class="menu-trigger" data-menu="tools">Tools</button>
+          <div class="menu-dropdown hidden" id="dropdown-tools">
+            <div class="menu-item" id="menu-tools-info"><span class="menu-icon">ℹ</span><span class="menu-text">Media Info...</span></div>
+          </div>
+        </div>
+        <div class="menu-trigger-container">
+          <button class="menu-trigger" data-menu="view">View</button>
+          <div class="menu-dropdown hidden" id="dropdown-view">
+            <div class="menu-item-parent">
+              <div class="menu-item">
+                <span class="menu-icon">🎨</span>
+                <span class="menu-text">Theme</span>
+                <span class="menu-arrow">▶</span>
+              </div>
+              <div class="menu-submenu">
+                <div class="menu-item" id="menu-theme-violet">Dark Violet (Default)</div>
+                <div class="menu-item" id="menu-theme-gray">Sleek Gray</div>
+                <div class="menu-item" id="menu-theme-emerald">Emerald Glass</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </nav>
+    </div>
+    <div class="title-bar-center" id="media-title-bar" data-tauri-drag-region>
+      <span id="title-bar-filename"></span>
+    </div>
+    <div class="title-bar-controls">
+      <button id="btn-minimize" class="title-btn" title="Minimize">
+        <svg width="12" height="12" viewBox="0 0 12 12"><line x1="1" y1="6" x2="11" y2="6" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+      </button>
+      <button id="btn-maximize" class="title-btn" title="Maximize">
+        <svg width="12" height="12" viewBox="0 0 12 12"><rect x="1" y="1" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.5" fill="none"/></svg>
+      </button>
+      <button id="btn-close" class="title-btn title-btn-close" title="Close">
+        <svg width="12" height="12" viewBox="0 0 12 12">
+          <line x1="1" y1="1" x2="11" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+          <line x1="11" y1="1" x2="1" y2="11" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+
+  <!-- Main Content -->
+  <div id="app">
+
+    <!-- Video Area -->
+    <div id="video-container" class="video-container">
+
+      <!-- Drop Zone / Welcome Screen -->
+      <div id="drop-zone" class="drop-zone active">
+        <div class="drop-zone-inner">
+          <div class="drop-icon">
+            <svg width="64" height="64" viewBox="0 0 64 64" fill="none">
+              <defs>
+                <linearGradient id="dropGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stop-color="#7C3AED" stop-opacity="0.8"/>
+                  <stop offset="100%" stop-color="#06B6D4" stop-opacity="0.8"/>
+                </linearGradient>
+              </defs>
+              <circle cx="32" cy="32" r="30" stroke="url(#dropGrad)" stroke-width="1.5" stroke-dasharray="4 3"/>
+              <path d="M22 36L32 26L42 36" stroke="url(#dropGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+              <line x1="32" y1="26" x2="32" y2="44" stroke="url(#dropGrad)" stroke-width="2.5" stroke-linecap="round"/>
+            </svg>
+          </div>
+          <h1 class="drop-title">Drop a file to play</h1>
+          <p class="drop-subtitle">or click Open below</p>
+          <div class="drop-formats">
+            <span>MP4</span><span>MKV</span><span>AVI</span><span>MOV</span><span>WEBM</span><span>MP3</span><span>FLAC</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- mpv renders into this element (via wid) -->
+      <div id="mpv-container" class="mpv-container hidden"></div>
+
+      <!-- Overlay controls (shown on hover) -->
+      <div id="overlay" class="overlay hidden">
+        <div class="overlay-center-btn" id="overlay-play-btn">
+          <svg id="overlay-play-icon" width="48" height="48" viewBox="0 0 48 48" fill="none">
+            <circle cx="24" cy="24" r="22" fill="rgba(0,0,0,0.5)" stroke="rgba(255,255,255,0.2)" stroke-width="1"/>
+            <path d="M19 16L33 24L19 32V16Z" fill="white"/>
+          </svg>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Control Bar -->
+    <div id="control-bar" class="control-bar">
+
+      <!-- Progress / Seek -->
+      <div class="progress-row">
+        <span id="time-current" class="time-label">0:00</span>
+        <div class="seek-track" id="seek-track">
+          <div class="seek-buffered" id="seek-buffered"></div>
+          <div class="seek-filled" id="seek-filled"></div>
+          <div class="seek-thumb" id="seek-thumb"></div>
+        </div>
+        <span id="time-total" class="time-label">0:00</span>
+      </div>
+
+      <!-- Buttons Row -->
+      <div class="buttons-row">
+
+        <!-- Left Controls -->
+        <div class="controls-left">
+          <button id="btn-open" class="ctrl-btn ctrl-btn-open" title="Open File">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M3 7C3 5.9 3.9 5 5 5H10L12 7H19C20.1 7 21 7.9 21 9V17C21 18.1 20.1 19 19 19H5C3.9 19 3 18.1 3 17V7Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+            </svg>
+            <span>Open</span>
+          </button>
+
+          <!-- Volume -->
+          <div class="volume-group">
+            <button id="btn-mute" class="ctrl-btn-icon" title="Mute">
+              <!-- Speaker icon (shown when not muted) -->
+              <svg id="volume-icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
+                <path d="M11 5L6 9H2V15H6L11 19V5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                <path id="vol-wave1" d="M15.5 8.5C16.8 9.8 17.5 11.3 17.5 12C17.5 12.7 16.8 14.2 15.5 15.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <path id="vol-wave2" d="M18.5 6.5C20.5 8.5 21.5 10.3 21.5 12C21.5 13.7 20.5 15.5 18.5 17.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+              <!-- Mute icon (shown when muted) -->
+              <svg id="mute-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" class="hidden">
+                <path d="M11 5L6 9H2V15H6L11 19V5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+                <line x1="15" y1="9" x2="21" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+                <line x1="21" y1="9" x2="15" y2="15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              </svg>
+            </button>
+            <div class="volume-track" id="volume-track">
+              <div class="volume-filled" id="volume-filled" style="width: 37.5%"></div>
+              <div class="volume-thumb" id="volume-thumb" style="left: 37.5%"></div>
+            </div>
+            <span class="volume-pct" id="volume-pct">75%</span>
+          </div>
+        </div>
+
+        <!-- Center Controls -->
+        <div class="controls-center">
+          <button id="btn-prev" class="ctrl-btn-icon" title="Previous Video">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M19 20L9 12L19 4V20Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+              <line x1="5" y1="4" x2="5" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+
+          <button id="btn-skip-back" class="ctrl-btn-icon" title="Skip Backward 5s">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M11 19L2 12L11 5V19Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M22 19L13 12L22 5V19Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <button id="btn-play-pause" class="ctrl-btn-play" title="Play/Pause">
+            <svg id="play-icon" width="26" height="26" viewBox="0 0 26 26" fill="none">
+              <path d="M8 5L21 13L8 21V5Z" fill="currentColor"/>
+            </svg>
+            <svg id="pause-icon" width="26" height="26" viewBox="0 0 26 26" fill="none" class="hidden">
+              <rect x="6" y="4" width="4" height="18" rx="2" fill="currentColor"/>
+              <rect x="16" y="4" width="4" height="18" rx="2" fill="currentColor"/>
+            </svg>
+          </button>
+
+          <button id="btn-skip-forward" class="ctrl-btn-icon" title="Skip Forward 5s">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M13 5L22 12L13 19V5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+              <path d="M2 5L11 12L2 19V5Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+            </svg>
+          </button>
+
+          <button id="btn-next" class="ctrl-btn-icon" title="Next Video">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
+              <path d="M5 4L15 12L5 20V4Z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>
+              <line x1="19" y1="4" x2="19" y2="20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Right Controls -->
+        <div class="controls-right">
+          <!-- Repeat Mode -->
+          <div class="repeat-group">
+            <button id="btn-repeat" class="ctrl-btn-icon" title="Repeat Mode">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M17 1v3H4a2 2 0 0 0-2 2v3" />
+                <path d="m15 2 3 2-3 2" />
+                <path d="M7 23v-3h13a2 2 0 0 0 2-2v-3" />
+                <path d="m9 22-3-2 3-2" />
+                <text id="repeat-badge" x="12" y="14" font-family="inherit" font-size="8" font-weight="700" fill="currentColor" text-anchor="middle" class="hidden">1</text>
+              </svg>
+            </button>
+            <div class="repeat-dropdown hidden" id="repeat-dropdown">
+              <div class="repeat-item active" data-repeat="no">No Repeat</div>
+              <div class="repeat-item" data-repeat="once">Repeat Once</div>
+              <div class="repeat-item" data-repeat="twice">Repeat Twice</div>
+              <div class="repeat-item" data-repeat="forever">Repeat Forever</div>
+            </div>
+          </div>
+
+          <button id="btn-fullscreen" class="ctrl-btn-icon" title="Toggle Fullscreen">
+            <svg id="fullscreen-icon" width="18" height="18" viewBox="0 0 24 24" fill="none">
+              <path d="M4 8V4H8M16 4H20V8M20 16V20H16M8 20H4V16" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+            <svg id="exit-fullscreen-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" class="hidden">
+              <path d="M8 4V8H4M20 8H16V4M16 20V16H20M4 16H8V20" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            </svg>
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+
+  <!-- Custom Context Menu -->
+  <div id="context-menu" class="context-menu hidden">
+    <div class="menu-item" id="ctx-play-pause">
+      <span class="menu-icon">▶</span>
+      <span class="menu-text">Play / Pause</span>
+      <span class="menu-shortcut">Space</span>
+    </div>
+    <div class="menu-item" id="ctx-prev">
+      <span class="menu-icon">⏮</span>
+      <span class="menu-text">Previous Video</span>
+      <span class="menu-shortcut"></span>
+    </div>
+    <div class="menu-item" id="ctx-next">
+      <span class="menu-icon">⏭</span>
+      <span class="menu-text">Next Video</span>
+      <span class="menu-shortcut"></span>
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-item-parent">
+      <div class="menu-item">
+        <span class="menu-icon">⚡</span>
+        <span class="menu-text">Playback Speed</span>
+        <span class="menu-arrow">▶</span>
+      </div>
+      <div class="context-submenu">
+        <div class="menu-item" id="ctx-speed-05">0.5x</div>
+        <div class="menu-item" id="ctx-speed-075">0.75x</div>
+        <div class="menu-item" id="ctx-speed-10">1.0x (Normal)</div>
+        <div class="menu-item" id="ctx-speed-125">1.25x</div>
+        <div class="menu-item" id="ctx-speed-15">1.5x</div>
+        <div class="menu-item" id="ctx-speed-20">2.0x</div>
+        <div class="menu-divider"></div>
+        <div class="menu-item" id="ctx-speed-up">Increase (+0.25x)</div>
+        <div class="menu-item" id="ctx-speed-down">Decrease (-0.25x)</div>
+      </div>
+    </div>
+    <div class="menu-divider"></div>
+    <div class="menu-item" id="ctx-fullscreen">
+      <span class="menu-icon">⛶</span>
+      <span class="menu-text">Toggle Fullscreen</span>
+      <span class="menu-shortcut">F</span>
+    </div>
+  </div>
+
+  <!-- Toast notification -->
+  <div id="toast" class="toast hidden"></div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>

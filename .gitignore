@@ -1,0 +1,48 @@
+# Rust / Cargo
+/target
+/src-tauri/target
+
+# Node.js
+/node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Logs and Debug files
+*.log
+app_debug.log
+mpv_debug.log
+
+# IDEs and Editors
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.vs/
+
+# OS files
+Thumbs.db
+db.db
+Desktop.ini
+.DS_Store
+
+# Local Env
+.env
+.env*.local
+
+# Dist
+dist/
+
+# Video test files
+*.mp4
+*.mkv
+*.avi
+*.mov
+*.webm
+
+# Large binaries in vendor
+vendor/*.dll
+
