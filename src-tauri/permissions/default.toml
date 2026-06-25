@@ -18,5 +18,8 @@ allow = [
   "next_video",
   "previous_video",
   "set_speed",
-  "get_startup_file"
+  "get_startup_file",
+  "set_mpv_property",
+  "set_loop_mode",
+  "log_from_frontend"
 ]
