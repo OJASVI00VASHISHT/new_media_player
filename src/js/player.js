@@ -155,11 +155,10 @@ function startPolling() {
       const snap = await invoke('get_state');
       duration = snap.duration || 0;
 
-      if (!isImage && !isGif) {
-        seekBar.setProgress(snap.position, duration);
-        timeCurrent.textContent = formatTime(snap.position);
-        timeTotal.textContent   = formatTime(duration);
-      }
+      seekBar.setProgress(snap.position, duration);
+      timeCurrent.textContent = formatTime(snap.position);
+      timeTotal.textContent   = formatTime(duration);
+      
       updatePlaylistUI(snap);
     } catch (_) {}
   }, 500);
@@ -202,31 +201,19 @@ export async function loadFile(path) {
     isImage = ['jpg','jpeg','png','webp','bmp','avif','heic'].includes(ext);
     isGif = ext === 'gif';
 
-    if (isImage || isGif) {
-      progressRow.classList.add('hidden');
-      if (isImage) {
-        btnPlayPause.classList.add('hidden');
-      } else {
-        btnPlayPause.classList.remove('hidden');
-      }
-      btnSkipBack.classList.add('hidden');
-      btnSkipForward.classList.add('hidden');
-      
-      if (isGif) {
-        await invoke('set_loop_mode', { mode: 'inf' });
-      }
-    } else {
-      progressRow.classList.remove('hidden');
-      btnPlayPause.classList.remove('hidden');
-      btnSkipBack.classList.remove('hidden');
-      btnSkipForward.classList.remove('hidden');
+    // Remove any previously added hidden classes just in case
+    progressRow.classList.remove('hidden');
+    btnPlayPause.classList.remove('hidden');
+    btnSkipBack.classList.remove('hidden');
+    btnSkipForward.classList.remove('hidden');
+
+    if (isGif) {
+      await invoke('set_loop_mode', { mode: 'inf' });
     }
 
     setPlaying(true);
     duration = snap.duration || 0;
-    if (!isImage && !isGif) {
-      timeTotal.textContent = formatTime(duration);
-    }
+    timeTotal.textContent = formatTime(duration);
     updatePlaylistUI(snap);
     startPolling();
     showToast('▶ Now playing');
