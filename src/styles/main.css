@@ -266,21 +266,24 @@ button:focus-visible {
 .overlay {
   position: absolute;
   inset: 0;
-  z-index: 5;
   display: flex;
   align-items: center;
   justify-content: center;
-  cursor: pointer;
-  transition: opacity var(--t-med);
+  background: transparent;
+  transition: opacity 0.2s;
+  pointer-events: none;
+  z-index: 5;
 }
-
 .overlay.hidden {
   opacity: 0;
-  pointer-events: none;
   display: flex !important; /* override .hidden so transition works */
 }
 
 .overlay-center-btn {
+  cursor: pointer;
+  opacity: 0.8;
+  transition: opacity 0.2s, transform 0.1s;
+  pointer-events: auto;
   animation: pop-in 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 

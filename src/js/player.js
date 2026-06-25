@@ -149,8 +149,8 @@ if (mpvContainer) {
       
       // video-align ranges from -1 to 1. Adjust sensitivity as needed
       // Negative dx means moving mouse left, which means we want to see more of the right side -> alignX increases
-      alignX += dx * 0.005;
-      alignY += dy * 0.005;
+      alignX -= dx * 0.005;
+      alignY -= dy * 0.005;
       
       alignX = Math.max(-1, Math.min(1, alignX));
       alignY = Math.max(-1, Math.min(1, alignY));
