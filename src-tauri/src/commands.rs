@@ -38,10 +38,10 @@ fn get_media_files_in_dir(dir: &std::path::Path) -> Vec<String> {
     let mut files = Vec::new();
     let supported_exts = [
         "mp4", "mkv", "avi", "mov", "webm", "wmv", "flv", 
-        "mp3", "flac", "ogg", "wav", "aac", "m4a", "m4v", "ts"
+        "mp3", "flac", "ogg", "wav", "aac", "m4a", "m4v", "ts",
+        "jpg", "jpeg", "png", "gif", "webp", "bmp", "avif", "heic"
     ];
     if let Ok(entries) = std::fs::read_dir(dir) {
-        for entry in entries {
             if let Ok(entry) = entry {
                 let p = entry.path();
                 if p.is_file() {

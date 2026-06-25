@@ -18,6 +18,10 @@ let currentVolume  = 75;  // 0-200
 let isMuted        = false;
 let premuteVolume  = 75;  // saved before mute
 
+// Image/GIF state
+let isImage = false;
+let isGif = false;
+
 // ── DOM Refs ─────────────────────────────────────────────────
 const dropZone       = document.getElementById('drop-zone');
 const mpvContainer   = document.getElementById('mpv-container');
@@ -34,6 +38,10 @@ const volumeIcon     = document.getElementById('volume-icon');
 const muteIcon       = document.getElementById('mute-icon');
 const fsIcon         = document.getElementById('fullscreen-icon');
 const exitFsIcon     = document.getElementById('exit-fullscreen-icon');
+const progressRow    = document.querySelector('.progress-row');
+const btnPlayPause   = document.getElementById('btn-play-pause');
+const btnSkipBack    = document.getElementById('btn-skip-back');
+const btnSkipForward = document.getElementById('btn-skip-forward');
 
 // ── Seek Bar ─────────────────────────────────────────────────
 const seekBar = new SeekBar({
@@ -147,9 +155,11 @@ function startPolling() {
       const snap = await invoke('get_state');
       duration = snap.duration || 0;
 
-      seekBar.setProgress(snap.position, duration);
-      timeCurrent.textContent = formatTime(snap.position);
-      timeTotal.textContent   = formatTime(duration);
+      if (!isImage && !isGif) {
+        seekBar.setProgress(snap.position, duration);
+        timeCurrent.textContent = formatTime(snap.position);
+        timeTotal.textContent   = formatTime(duration);
+      }
       updatePlaylistUI(snap);
     } catch (_) {}
   }, 500);
@@ -169,7 +179,8 @@ export async function openFileDialog() {
       filters: [{
         name: 'Media',
         extensions: ['mp4','mkv','avi','mov','webm','wmv','flv',
-                     'mp3','flac','ogg','wav','aac','m4a','m4v','ts']
+                     'mp3','flac','ogg','wav','aac','m4a','m4v','ts',
+                     'jpg','jpeg','png','gif','webp','bmp','avif','heic']
       }]
     });
     if (!selected) return;
@@ -183,10 +194,39 @@ export async function openFileDialog() {
 export async function loadFile(path) {
   try {
     const snap = await invoke('open_file', { path });
-    showPlayer(snap.filename || path.split(/[\\/]/).pop());
+    const filename = snap.filename || path.split(/[\\/]/).pop();
+    showPlayer(filename);
+    
+    // Check if image or GIF
+    const ext = filename.split('.').pop().toLowerCase();
+    isImage = ['jpg','jpeg','png','webp','bmp','avif','heic'].includes(ext);
+    isGif = ext === 'gif';
+
+    if (isImage || isGif) {
+      progressRow.classList.add('hidden');
+      if (isImage) {
+        btnPlayPause.classList.add('hidden');
+      } else {
+        btnPlayPause.classList.remove('hidden');
+      }
+      btnSkipBack.classList.add('hidden');
+      btnSkipForward.classList.add('hidden');
+      
+      if (isGif) {
+        await invoke('set_loop_mode', { mode: 'inf' });
+      }
+    } else {
+      progressRow.classList.remove('hidden');
+      btnPlayPause.classList.remove('hidden');
+      btnSkipBack.classList.remove('hidden');
+      btnSkipForward.classList.remove('hidden');
+    }
+
     setPlaying(true);
     duration = snap.duration || 0;
-    timeTotal.textContent = formatTime(duration);
+    if (!isImage && !isGif) {
+      timeTotal.textContent = formatTime(duration);
+    }
     updatePlaylistUI(snap);
     startPolling();
     showToast('▶ Now playing');
@@ -380,4 +420,4 @@ export async function changeVolumeByDelta(delta) {
   }
 }
 
-export { setPlaying, isPlaying, duration };
+export { setPlaying, isPlaying, duration, isImage, isGif };

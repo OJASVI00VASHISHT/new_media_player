@@ -22,6 +22,8 @@ import {
   showMediaInfo,
   changeTheme,
   changeVolumeByDelta,
+  isImage,
+  isGif
 } from './player.js';
 
 import { showToast } from './ui.js';
@@ -96,11 +98,19 @@ document.addEventListener('keydown', async (e) => {
       break;
     case 'ArrowLeft':
       e.preventDefault();
-      await seekRelative(e.shiftKey ? -30 : -5);
+      if (isImage || isGif) {
+        await previousVideo();
+      } else {
+        await seekRelative(e.shiftKey ? -30 : -5);
+      }
       break;
     case 'ArrowRight':
       e.preventDefault();
-      await seekRelative(e.shiftKey ? 30 : 5);
+      if (isImage || isGif) {
+        await nextVideo();
+      } else {
+        await seekRelative(e.shiftKey ? 30 : 5);
+      }
       break;
     case 'f':
     case 'F11':
