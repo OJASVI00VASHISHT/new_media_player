@@ -42,6 +42,7 @@ fn get_media_files_in_dir(dir: &std::path::Path) -> Vec<String> {
         "jpg", "jpeg", "png", "gif", "webp", "bmp", "avif", "heic"
     ];
     if let Ok(entries) = std::fs::read_dir(dir) {
+        for entry in entries {
             if let Ok(entry) = entry {
                 let p = entry.path();
                 if p.is_file() {
