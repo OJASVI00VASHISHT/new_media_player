@@ -106,7 +106,7 @@ export const zoomBar = new ZoomBar({
 });
 zoomBar.setValue(currentZoom);
 
-export async function changeZoomByDelta(delta) {
+async function changeZoomByDelta(delta) {
   const target = Math.max(50, Math.min(500, currentZoom + delta));
   zoomBar.setValue(target);
   zoomBar.onZoom(target);
