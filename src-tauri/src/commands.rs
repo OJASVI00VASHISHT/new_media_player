@@ -457,17 +457,57 @@ pub fn set_mpv_property(
         crate::log_to_file(&format!("set_property as string failed for {}, trying parsed types. Error: {:?}", name, e));
         
         if let Ok(b) = value.parse::<bool>() {
-            handle.set_property(&name, b).map_err(|err| err.to_string())?;
+            if let Err(e2) = handle.set_property(&name, b) {
+                crate::log_to_file(&format!("set_property as bool also failed: {:?}", e2));
+                return Err(e.to_string());
+            }
         } else if let Ok(i) = value.parse::<i64>() {
-            handle.set_property(&name, i).map_err(|err| err.to_string())?;
+            if let Err(e2) = handle.set_property(&name, i) {
+                crate::log_to_file(&format!("set_property as i64 also failed: {:?}", e2));
+                return Err(e.to_string());
+            }
         } else if let Ok(f) = value.parse::<f64>() {
-            handle.set_property(&name, f).map_err(|err| err.to_string())?;
+            if let Err(e2) = handle.set_property(&name, f) {
+                crate::log_to_file(&format!("set_property as f64 also failed: {:?}", e2));
+                return Err(e.to_string());
+            }
         } else {
             return Err(e.to_string());
         }
     }
     
     Ok(())
+}
+
+/// Dedicated loop/repeat command using mpv's `set` command API.
+/// This is far more reliable than set_property for loop-file when media is playing,
+/// because it goes through mpv's script command parser which handles flag types correctly.
+#[tauri::command]
+pub fn set_loop_mode(
+    mode: String, // "no" | "1" | "2" | "inf"
+    mpv_state: State<Mutex<MpvPlayer>>,
+) -> Result<(), String> {
+    crate::log_to_file(&format!("set_loop_mode invoked: mode={}", mode));
+    let mpv = mpv_state.lock().map_err(|e| e.to_string())?;
+    let handle = mpv.handle.lock().map_err(|e| e.to_string())?;
+
+    // Use the mpv command API "set" which is what the mpv scripting interface uses.
+    // This correctly handles the special Flag/Choice type of loop-file.
+    let result = handle.command("set", &["loop-file", &mode]);
+    match result {
+        Ok(_) => {
+            crate::log_to_file(&format!("set_loop_mode success: loop-file={}", mode));
+            Ok(())
+        }
+        Err(e) => {
+            crate::log_to_file(&format!("set_loop_mode via command failed: {:?}, falling back to set_property", e));
+            // Fallback: try set_property as string
+            handle.set_property("loop-file", mode.as_str()).map_err(|e2| {
+                crate::log_to_file(&format!("set_loop_mode fallback set_property also failed: {:?}", e2));
+                format!("set loop failed: {:?} / {:?}", e, e2)
+            })
+        }
+    }
 }
 
 #[tauri::command]

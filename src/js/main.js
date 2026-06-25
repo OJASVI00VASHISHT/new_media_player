@@ -482,7 +482,9 @@ async function setRepeatMode(mode) {
 
   try {
     const { invoke } = window.__TAURI__.core;
-    await invoke('set_mpv_property', { name: 'loop-file', value: mpvValue });
+    // Use dedicated set_loop_mode which uses mpv's command API — far more
+    // reliable than set_property for loop-file when media is actively playing.
+    await invoke('set_loop_mode', { mode: mpvValue });
     showToast(toastMsg);
 
     repeatItems.forEach(item => {

@@ -130,6 +130,7 @@ pub fn run() {
             commands::set_speed,
             commands::get_startup_file,
             commands::set_mpv_property,
+            commands::set_loop_mode,
             commands::log_from_frontend,
         ])
         .setup(|app| {
