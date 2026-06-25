@@ -36,11 +36,10 @@ initWindowControls();
 document.getElementById('btn-open').addEventListener('click', openFileDialog);
 
 document.addEventListener('wheel', async (e) => {
-  if (e.ctrlKey) {
+  if (isImage || isGif || e.ctrlKey) {
     e.preventDefault();
-    // deltaY is negative when scrolling up (zooming in), positive when scrolling down (zooming out)
-    // A standard mouse wheel 'click' is typically 100 or 120. Trackpad values can be smaller.
-    const zoomStep = e.deltaY < 0 ? 15 : -15;
+    // Use a small multiplier for smooth zoom on trackpads, which fire many small deltaY events
+    const zoomStep = -(e.deltaY * 0.2);
     await changeZoomByDelta(zoomStep);
   }
 }, { passive: false });
@@ -170,6 +169,7 @@ document.addEventListener('keydown', async (e) => {
 
 // ── Mouse show/hide overlay on video ─────────────────────────
 const mpvCon = document.getElementById('mpv-container');
+const vidCon = document.getElementById('video-container');
 let mouseMoveTimer = null;
 
 mpvCon.addEventListener('mousemove', () => {
@@ -177,6 +177,11 @@ mpvCon.addEventListener('mousemove', () => {
   overlay.classList.remove('hidden');
   clearTimeout(mouseMoveTimer);
   mouseMoveTimer = setTimeout(() => overlay.classList.add('hidden'), 2500);
+});
+
+vidCon.addEventListener('mouseleave', () => {
+  const overlay = document.getElementById('overlay');
+  overlay.classList.add('hidden');
 });
 
 // ── Custom Context Menu ───────────────────────────────────────
