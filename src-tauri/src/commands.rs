@@ -35,7 +35,7 @@ fn basename(path: &str) -> String {
 }
 
 fn get_media_files_in_dir(dir: &std::path::Path) -> Vec<String> {
-    let mut files = Vec::new();
+    let mut files_with_time: Vec<(String, std::time::SystemTime)> = Vec::new();
     let supported_exts = [
         "mp4", "mkv", "avi", "mov", "webm", "wmv", "flv", 
         "mp3", "flac", "ogg", "wav", "aac", "m4a", "m4v", "ts",
@@ -50,7 +50,11 @@ fn get_media_files_in_dir(dir: &std::path::Path) -> Vec<String> {
                         let ext_lower = ext.to_lowercase();
                         if supported_exts.contains(&ext_lower.as_str()) {
                             if let Some(path_str) = p.to_str() {
-                                files.push(path_str.to_string());
+                                let modified_time = entry
+                                    .metadata()
+                                    .and_then(|m| m.modified())
+                                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                                files_with_time.push((path_str.to_string(), modified_time));
                             }
                         }
                     }
@@ -58,9 +62,9 @@ fn get_media_files_in_dir(dir: &std::path::Path) -> Vec<String> {
             }
         }
     }
-    // Sort alphabetically (case-insensitive)
-    files.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
-    files
+    // Sort by Modified Time descending (newest first)
+    files_with_time.sort_by(|a, b| b.1.cmp(&a.1));
+    files_with_time.into_iter().map(|(path, _)| path).collect()
 }
 
 // ── Commands ─────────────────────────────────────────────────────────────────
