@@ -32,7 +32,8 @@ fn is_supported_media_file(path: &std::path::Path) -> bool {
         let ext_lower = ext.to_lowercase();
         let supported = [
             "mp4", "mkv", "avi", "mov", "webm", "wmv", "flv", 
-            "mp3", "flac", "ogg", "wav", "aac", "m4a", "m4v", "ts"
+            "mp3", "flac", "ogg", "wav", "aac", "m4a", "m4v", "ts",
+            "jpg", "jpeg", "png", "gif", "webp", "bmp", "avif", "heic"
         ];
         supported.contains(&ext_lower.as_str())
     } else {
