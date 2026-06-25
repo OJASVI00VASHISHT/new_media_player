@@ -3,7 +3,7 @@
 
 'use strict';
 
-import { formatTime, showToast, SeekBar, VolumeBar, showOverlay } from './ui.js';
+import { formatTime, showToast, SeekBar, VolumeBar, ZoomBar, showOverlay } from './ui.js';
 
 const { invoke } = window.__TAURI__.core;
 
@@ -76,6 +76,34 @@ export const volumeBar = new VolumeBar({
 });
 // Set initial display
 volumeBar.setValue(currentVolume);
+
+// ── Zoom Bar ─────────────────────────────────────────────────
+let currentZoom = 100;
+
+export const zoomBar = new ZoomBar({
+  trackEl:  document.getElementById('zoom-track'),
+  filledEl: document.getElementById('zoom-filled'),
+  thumbEl:  document.getElementById('zoom-thumb'),
+  onZoom: async (zoom) => {
+    try {
+      currentZoom = zoom;
+      const zoomLog2 = Math.log2(zoom / 100).toString();
+      await invoke('set_mpv_property', { name: 'video-zoom', value: zoomLog2 });
+    } catch (e) { console.error('zoom error', e); }
+  }
+});
+zoomBar.setValue(currentZoom);
+
+const btnZoomIcon = document.getElementById('btn-zoom-icon');
+if (btnZoomIcon) {
+  btnZoomIcon.addEventListener('click', async () => {
+    currentZoom = 100;
+    zoomBar.setValue(currentZoom);
+    try {
+      await invoke('set_mpv_property', { name: 'video-zoom', value: '0' });
+    } catch (e) {}
+  });
+}
 
 // ── Helpers ──────────────────────────────────────────────────
 function setPlaying(playing) {
@@ -214,6 +242,12 @@ export async function loadFile(path) {
     setPlaying(true);
     duration = snap.duration || 0;
     timeTotal.textContent = formatTime(duration);
+    
+    // Reset zoom
+    currentZoom = 100;
+    zoomBar.setValue(currentZoom);
+    await invoke('set_mpv_property', { name: 'video-zoom', value: '0' });
+
     updatePlaylistUI(snap);
     startPolling();
     showToast('▶ Now playing');

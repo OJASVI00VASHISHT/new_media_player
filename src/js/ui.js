@@ -137,6 +137,57 @@ export class VolumeBar {
   }
 }
 
+// ── Zoom Bar ───────────────────────────────────────────────
+export class ZoomBar {
+  constructor({ trackEl, filledEl, thumbEl, onZoom }) {
+    this.track    = trackEl;
+    this.filled   = filledEl;
+    this.thumb    = thumbEl;
+    this.onZoom   = onZoom;
+    this.isDragging = false;
+    this.MIN = 50;
+    this.MAX = 500;
+
+    this._bindEvents();
+  }
+
+  setValue(zoom) {
+    const pct = Math.max(0, Math.min(100, ((zoom - this.MIN) / (this.MAX - this.MIN)) * 100));
+    this.filled.style.width = `${pct}%`;
+    this.thumb.style.left   = `${pct}%`;
+
+    const label = document.getElementById('zoom-pct');
+    if (label) {
+      label.textContent = `${Math.round(zoom)}%`;
+    }
+  }
+
+  _getZoomFromEvent(e) {
+    const rect = this.track.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const ratio = Math.max(0, Math.min(1, x / rect.width));
+    return Math.round(this.MIN + ratio * (this.MAX - this.MIN));
+  }
+
+  _bindEvents() {
+    this.track.addEventListener('mousedown', (e) => {
+      this.isDragging = true;
+      const zoom = this._getZoomFromEvent(e);
+      this.setValue(zoom);
+      this.onZoom(zoom);
+    });
+
+    document.addEventListener('mousemove', (e) => {
+      if (!this.isDragging) return;
+      const zoom = this._getZoomFromEvent(e);
+      this.setValue(zoom);
+      this.onZoom(zoom);
+    });
+
+    document.addEventListener('mouseup', () => { this.isDragging = false; });
+  }
+}
+
 // ── Overlay fade ─────────────────────────────────────────────
 let overlayTimer = null;
 export function showOverlay(el) {
