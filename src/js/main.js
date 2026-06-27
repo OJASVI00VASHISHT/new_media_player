@@ -24,16 +24,21 @@ import {
   changeVolumeByDelta,
   changeZoomByDelta,
   isImage,
-  isGif
+  isGif,
+  currentFile,
+  toggleMediaInfo,
+  updateMediaInfoDisplay
 } from './player.js';
 
 import { showToast } from './ui.js';
+import { enterEditMode } from './edit-mode.js';
 
 // ── Init Window Controls (minimize / maximize / close) ────────
 initWindowControls();
 
 // ── Open File Button ──────────────────────────────────────────
 document.getElementById('btn-open').addEventListener('click', openFileDialog);
+document.getElementById('btn-info').addEventListener('click', toggleMediaInfo);
 
 document.addEventListener('wheel', async (e) => {
   if (isImage || isGif || e.ctrlKey) {
@@ -278,6 +283,7 @@ document.getElementById('ctx-speed-down').addEventListener('click', async () => 
 
 // ── Startup File Check ────────────────────────────────────────
 (async () => {
+  await updateMediaInfoDisplay();
   try {
     const { invoke } = window.__TAURI__.core;
     const startupFile = await invoke('get_startup_file');
@@ -461,10 +467,18 @@ document.getElementById('menu-sub-large').addEventListener('click', async () => 
   await setSubtitleSize('1.5');
 });
 
-// Tools
-document.getElementById('menu-tools-info').addEventListener('click', async () => {
+// Edit
+document.getElementById('btn-menu-edit')?.addEventListener('click', () => {
   closeAllMenus();
-  await showMediaInfo();
+  if (!currentFile) {
+    showToast('No media playing.');
+    return;
+  }
+  if (!isImage) {
+    showToast('Editing is only supported for images.');
+    return;
+  }
+  enterEditMode(currentFile);
 });
 
 // View

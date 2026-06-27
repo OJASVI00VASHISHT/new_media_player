@@ -8,6 +8,15 @@
   },
   "app": {
     "withGlobalTauri": true,
+    "security": {
+      "csp": "default-src 'self' ipc: http://ipc.localhost; img-src 'self' asset: https://asset.localhost http://asset.localhost asset://*",
+      "assetProtocol": {
+        "enable": true,
+        "scope": {
+          "allow": ["**/*"]
+        }
+      }
+    },
     "windows": [
       {
         "title": "Nova Player",

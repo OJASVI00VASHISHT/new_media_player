@@ -124,6 +124,9 @@ pub fn run() {
             commands::set_mpv_property,
             commands::set_loop_mode,
             commands::log_from_frontend,
+            commands::rotate_image_permanently,
+            commands::save_image_edits,
+            commands::get_media_info,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();

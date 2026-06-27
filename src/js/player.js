@@ -29,6 +29,10 @@ let startY = 0;
 let panX = 0;
 let panY = 0;
 
+// Rotation
+let tempRotation = 0;
+export let currentFile = null;
+
 // ── DOM Refs ─────────────────────────────────────────────────
 const dropZone       = document.getElementById('drop-zone');
 const mpvContainer   = document.getElementById('mpv-container');
@@ -160,6 +164,17 @@ if (mpvContainer) {
     }
   });
 
+// ── Rotate Button ─────────────────────────────────────────────
+const btnRotateTemp = document.getElementById('btn-rotate-temp');
+if (btnRotateTemp) {
+  btnRotateTemp.addEventListener('click', async () => {
+    tempRotation = (tempRotation + 90) % 360;
+    try {
+      await invoke('set_mpv_property', { name: 'video-rotate', value: tempRotation.toString() });
+    } catch (e) {}
+  });
+}
+
   document.addEventListener('mouseup', () => {
     if (isPanning) {
       isPanning = false;
@@ -284,6 +299,7 @@ export async function openFileDialog() {
 export async function loadFile(path) {
   try {
     const snap = await invoke('open_file', { path });
+    currentFile = snap.current_file || path;
     const filename = snap.filename || path.split(/[\\/]/).pop();
     showPlayer(filename);
     
@@ -306,17 +322,20 @@ export async function loadFile(path) {
     duration = snap.duration || 0;
     timeTotal.textContent = formatTime(duration);
     
-    // Reset zoom and pan
+    // Reset zoom, pan, and rotation
     currentZoom = 100;
     panX = 0;
     panY = 0;
+    tempRotation = 0;
     zoomBar.setValue(currentZoom);
     mpvContainer.classList.remove('can-pan');
     await invoke('set_mpv_property', { name: 'video-zoom', value: '0' });
     await invoke('set_mpv_property', { name: 'video-pan-x', value: '0' });
     await invoke('set_mpv_property', { name: 'video-pan-y', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-rotate', value: '0' });
 
     updatePlaylistUI(snap);
+    await updateMediaInfoDisplay();
     startPolling();
     showToast('▶ Now playing');
   } catch (e) {
@@ -363,11 +382,32 @@ export async function toggleFullscreen() {
 export async function nextVideo() {
   try {
     const snap = await invoke('next_video');
-    showPlayer(snap.filename);
+    currentFile = snap.current_file;
+    const filename = snap.filename || currentFile.split(/[\\/]/).pop();
+    showPlayer(filename);
+    
+    const ext = filename.split('.').pop().toLowerCase();
+    isImage = ['jpg','jpeg','png','webp','bmp','avif','heic'].includes(ext);
+    isGif = ext === 'gif';
+
     setPlaying(true);
     duration = snap.duration || 0;
     timeTotal.textContent = formatTime(duration);
+    
+    // Reset zoom, pan, and rotation
+    currentZoom = 100;
+    panX = 0;
+    panY = 0;
+    tempRotation = 0;
+    zoomBar.setValue(currentZoom);
+    mpvContainer.classList.remove('can-pan');
+    await invoke('set_mpv_property', { name: 'video-zoom', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-pan-x', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-pan-y', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-rotate', value: '0' });
+
     updatePlaylistUI(snap);
+    await updateMediaInfoDisplay();
     startPolling();
     showToast('⏭ Next video');
   } catch (e) {
@@ -379,11 +419,32 @@ export async function nextVideo() {
 export async function previousVideo() {
   try {
     const snap = await invoke('previous_video');
-    showPlayer(snap.filename);
+    currentFile = snap.current_file;
+    const filename = snap.filename || currentFile.split(/[\\/]/).pop();
+    showPlayer(filename);
+    
+    const ext = filename.split('.').pop().toLowerCase();
+    isImage = ['jpg','jpeg','png','webp','bmp','avif','heic'].includes(ext);
+    isGif = ext === 'gif';
+
     setPlaying(true);
     duration = snap.duration || 0;
     timeTotal.textContent = formatTime(duration);
+    
+    // Reset zoom, pan, and rotation
+    currentZoom = 100;
+    panX = 0;
+    panY = 0;
+    tempRotation = 0;
+    zoomBar.setValue(currentZoom);
+    mpvContainer.classList.remove('can-pan');
+    await invoke('set_mpv_property', { name: 'video-zoom', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-pan-x', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-pan-y', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-rotate', value: '0' });
+
     updatePlaylistUI(snap);
+    await updateMediaInfoDisplay();
     startPolling();
     showToast('⏮ Previous video');
   } catch (e) {
@@ -439,6 +500,8 @@ export async function stopVideo() {
     document.title = 'Nova Player';
     dropZone.classList.add('active');
     mpvContainer.classList.add('hidden');
+    const infoDisplay = document.getElementById('file-info-display');
+    if (infoDisplay) infoDisplay.classList.add('hidden');
     showToast('■ Media stopped');
   } catch (e) {
     console.error('stop error', e);
@@ -507,6 +570,59 @@ export async function changeVolumeByDelta(delta) {
   } catch (e) {
     console.error('change volume error', e);
   }
+}
+
+export async function updateMediaInfoDisplay() {
+  const infoDisplay = document.getElementById('file-info-display');
+  const infoDimensions = document.getElementById('info-dimensions');
+  const infoSize = document.getElementById('info-size');
+  const btnInfo = document.getElementById('btn-info');
+  
+  if (!currentFile) {
+    if (infoDisplay) infoDisplay.classList.add('hidden');
+    return;
+  }
+  
+  try {
+    const meta = await invoke('get_media_info', { path: currentFile });
+    
+    if (meta.dimensions) {
+      if (infoDimensions) infoDimensions.textContent = meta.dimensions;
+      const wrapper = document.getElementById('info-dimensions-wrapper');
+      if (wrapper) wrapper.classList.remove('hidden');
+    } else {
+      const wrapper = document.getElementById('info-dimensions-wrapper');
+      if (wrapper) wrapper.classList.add('hidden');
+    }
+    
+    if (meta.file_size) {
+      if (infoSize) infoSize.textContent = meta.file_size;
+      const wrapper = document.getElementById('info-size-wrapper');
+      if (wrapper) wrapper.classList.remove('hidden');
+    } else {
+      const wrapper = document.getElementById('info-size-wrapper');
+      if (wrapper) wrapper.classList.add('hidden');
+    }
+    
+    // Check local storage to see if info display should be visible
+    const showInfo = localStorage.getItem('show-media-info') === 'true';
+    if (showInfo) {
+      if (infoDisplay) infoDisplay.classList.remove('hidden');
+      if (btnInfo) btnInfo.classList.add('active');
+    } else {
+      if (infoDisplay) infoDisplay.classList.add('hidden');
+      if (btnInfo) btnInfo.classList.remove('active');
+    }
+  } catch (e) {
+    console.error('get_media_info error', e);
+    if (infoDisplay) infoDisplay.classList.add('hidden');
+  }
+}
+
+export function toggleMediaInfo() {
+  const showInfo = localStorage.getItem('show-media-info') === 'true';
+  localStorage.setItem('show-media-info', (!showInfo).toString());
+  updateMediaInfoDisplay();
 }
 
 export { setPlaying, isPlaying, duration, isImage, isGif, changeZoomByDelta };
