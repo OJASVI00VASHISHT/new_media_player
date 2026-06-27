@@ -32,7 +32,8 @@ fn is_supported_media_file(path: &std::path::Path) -> bool {
         let ext_lower = ext.to_lowercase();
         let supported = [
             "mp4", "mkv", "avi", "mov", "webm", "wmv", "flv", 
-            "mp3", "flac", "ogg", "wav", "aac", "m4a", "m4v", "ts"
+            "mp3", "flac", "ogg", "wav", "aac", "m4a", "m4v", "ts",
+            "jpg", "jpeg", "png", "gif", "webp", "bmp", "avif", "heic"
         ];
         supported.contains(&ext_lower.as_str())
     } else {
@@ -92,16 +93,7 @@ pub fn run() {
         }
     }
 
-    // TCP Single-Instance Bridge
-    let port = 58425;
-    let addr = format!("127.0.0.1:{}", port);
-    if let Ok(mut stream) = TcpStream::connect(&addr) {
-        log_to_file("Second instance detected, sending path and exiting immediately.");
-        let msg = startup_file.clone().unwrap_or_else(|| "__FOCUS__".to_string());
-        let _ = stream.write_all(msg.as_bytes());
-        let _ = stream.flush();
-        std::process::exit(0);
-    }
+    // Single-instance enforcement removed to allow multiple instances.
 
     let mut app_state = AppState::new();
     app_state.startup_file = startup_file;
@@ -132,43 +124,15 @@ pub fn run() {
             commands::set_mpv_property,
             commands::set_loop_mode,
             commands::log_from_frontend,
+            commands::rotate_image_permanently,
+            commands::save_image_edits,
+            commands::get_media_info,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();
             log::info!("Nova Player started");
 
-            // Start TCP listener for single-instance handling
-            let app_handle = app.handle().clone();
-            std::thread::spawn(move || {
-                log_to_file("Starting TCP single-instance listener on port 58425");
-                if let Ok(listener) = TcpListener::bind("127.0.0.1:58425") {
-                    for stream in listener.incoming() {
-                        if let Ok(mut stream) = stream {
-                            let mut buf = [0; 4096];
-                            if let Ok(n) = stream.read(&mut buf) {
-                                if n > 0 {
-                                    if let Ok(msg_str) = String::from_utf8(buf[..n].to_vec()) {
-                                        let msg_str = msg_str.trim().to_string();
-                                        if !msg_str.is_empty() {
-                                            log_to_file(&format!("TCP single-instance listener received message: {}", msg_str));
-                                            if msg_str != "__FOCUS__" {
-                                                let _ = app_handle.emit("open-file", msg_str);
-                                            }
-                                            if let Some(w) = app_handle.get_webview_window("main") {
-                                                let _ = w.set_focus();
-                                                let _ = w.unmaximize();
-                                                let _ = w.show();
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                } else {
-                    log_to_file("Failed to bind TCP single-instance listener on port 58425");
-                }
-            });
+            // Single-instance listener removed.
             
             #[cfg(target_os = "windows")]
             {

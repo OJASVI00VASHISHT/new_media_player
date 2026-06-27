@@ -3,7 +3,7 @@
 
 'use strict';
 
-import { formatTime, showToast, SeekBar, VolumeBar, showOverlay } from './ui.js';
+import { formatTime, showToast, SeekBar, VolumeBar, ZoomBar, showOverlay } from './ui.js';
 
 const { invoke } = window.__TAURI__.core;
 
@@ -17,6 +17,21 @@ let positionPoller = null;
 let currentVolume  = 75;  // 0-200
 let isMuted        = false;
 let premuteVolume  = 75;  // saved before mute
+
+// Image/GIF state
+let isImage = false;
+let isGif = false;
+
+// Pan state
+let isPanning = false;
+let startX = 0;
+let startY = 0;
+let panX = 0;
+let panY = 0;
+
+// Rotation
+let tempRotation = 0;
+export let currentFile = null;
 
 // ── DOM Refs ─────────────────────────────────────────────────
 const dropZone       = document.getElementById('drop-zone');
@@ -34,6 +49,10 @@ const volumeIcon     = document.getElementById('volume-icon');
 const muteIcon       = document.getElementById('mute-icon');
 const fsIcon         = document.getElementById('fullscreen-icon');
 const exitFsIcon     = document.getElementById('exit-fullscreen-icon');
+const progressRow    = document.querySelector('.progress-row');
+const btnPlayPause   = document.getElementById('btn-play-pause');
+const btnSkipBack    = document.getElementById('btn-skip-back');
+const btnSkipForward = document.getElementById('btn-skip-forward');
 
 // ── Seek Bar ─────────────────────────────────────────────────
 const seekBar = new SeekBar({
@@ -68,6 +87,101 @@ export const volumeBar = new VolumeBar({
 });
 // Set initial display
 volumeBar.setValue(currentVolume);
+
+// ── Zoom Bar & Panning ───────────────────────────────────────
+let currentZoom = 100;
+
+export const zoomBar = new ZoomBar({
+  trackEl:  document.getElementById('zoom-track'),
+  filledEl: document.getElementById('zoom-filled'),
+  thumbEl:  document.getElementById('zoom-thumb'),
+  onZoom: async (zoom) => {
+    try {
+      currentZoom = zoom;
+      const zoomLog2 = Math.log2(zoom / 100).toString();
+      await invoke('set_mpv_property', { name: 'video-zoom', value: zoomLog2 });
+      if (zoom === 100) {
+         mpvContainer.classList.remove('can-pan');
+      } else {
+         mpvContainer.classList.add('can-pan');
+      }
+    } catch (e) { console.error('zoom error', e); }
+  }
+});
+zoomBar.setValue(currentZoom);
+
+async function changeZoomByDelta(delta) {
+  const target = Math.max(50, Math.min(500, currentZoom + delta));
+  zoomBar.setValue(target);
+  zoomBar.onZoom(target);
+}
+
+const btnZoomIcon = document.getElementById('btn-zoom-icon');
+if (btnZoomIcon) {
+  btnZoomIcon.addEventListener('click', async () => {
+    currentZoom = 100;
+    panX = 0;
+    panY = 0;
+    zoomBar.setValue(currentZoom);
+    try {
+      await invoke('set_mpv_property', { name: 'video-zoom', value: '0' });
+      await invoke('set_mpv_property', { name: 'video-pan-x', value: '0' });
+      await invoke('set_mpv_property', { name: 'video-pan-y', value: '0' });
+      mpvContainer.classList.remove('can-pan');
+    } catch (e) {}
+  });
+}
+
+// Mouse events for panning
+if (mpvContainer) {
+  mpvContainer.addEventListener('mousedown', (e) => {
+    if (currentZoom > 100 && (isImage || isGif || isPlaying)) {
+      isPanning = true;
+      startX = e.clientX;
+      startY = e.clientY;
+      mpvContainer.classList.add('is-panning');
+      e.preventDefault(); // Prevent default text selection
+    }
+  });
+
+  document.addEventListener('mousemove', async (e) => {
+    if (isPanning) {
+      const dx = e.clientX - startX;
+      const dy = e.clientY - startY;
+      startX = e.clientX;
+      startY = e.clientY;
+      
+      // video-pan-x/y uses fractions of the scaled video dimension. 
+      // This formula approximates a 1:1 pixel mapping with the mouse cursor.
+      const zoomFactor = currentZoom / 100;
+      panX += dx / (window.innerWidth * zoomFactor);
+      panY += dy / (window.innerHeight * zoomFactor);
+      
+      try {
+        await invoke('set_mpv_property', { name: 'video-pan-x', value: panX.toString() });
+        await invoke('set_mpv_property', { name: 'video-pan-y', value: panY.toString() });
+      } catch (_) {}
+    }
+  });
+
+// ── Rotate Button ─────────────────────────────────────────────
+const btnRotateTemp = document.getElementById('btn-rotate-temp');
+if (btnRotateTemp) {
+  btnRotateTemp.addEventListener('click', async () => {
+    tempRotation = (tempRotation + 90) % 360;
+    try {
+      await invoke('set_mpv_property', { name: 'video-rotate', value: tempRotation.toString() });
+    } catch (e) {}
+  });
+}
+
+  document.addEventListener('mouseup', () => {
+    if (isPanning) {
+      isPanning = false;
+      mpvContainer.classList.remove('is-panning');
+    }
+  });
+}
 
 // ── Helpers ──────────────────────────────────────────────────
 function setPlaying(playing) {
@@ -150,6 +264,7 @@ function startPolling() {
       seekBar.setProgress(snap.position, duration);
       timeCurrent.textContent = formatTime(snap.position);
       timeTotal.textContent   = formatTime(duration);
+      
       updatePlaylistUI(snap);
     } catch (_) {}
   }, 500);
@@ -169,7 +284,8 @@ export async function openFileDialog() {
       filters: [{
         name: 'Media',
         extensions: ['mp4','mkv','avi','mov','webm','wmv','flv',
-                     'mp3','flac','ogg','wav','aac','m4a','m4v','ts']
+                     'mp3','flac','ogg','wav','aac','m4a','m4v','ts',
+                     'jpg','jpeg','png','gif','webp','bmp','avif','heic']
       }]
     });
     if (!selected) return;
@@ -183,11 +299,43 @@ export async function openFileDialog() {
 export async function loadFile(path) {
   try {
     const snap = await invoke('open_file', { path });
-    showPlayer(snap.filename || path.split(/[\\/]/).pop());
+    currentFile = snap.current_file || path;
+    const filename = snap.filename || path.split(/[\\/]/).pop();
+    showPlayer(filename);
+    
+    // Check if image or GIF
+    const ext = filename.split('.').pop().toLowerCase();
+    isImage = ['jpg','jpeg','png','webp','bmp','avif','heic'].includes(ext);
+    isGif = ext === 'gif';
+
+    // Remove any previously added hidden classes just in case
+    progressRow.classList.remove('hidden');
+    btnPlayPause.classList.remove('hidden');
+    btnSkipBack.classList.remove('hidden');
+    btnSkipForward.classList.remove('hidden');
+
+    if (isGif) {
+      await invoke('set_loop_mode', { mode: 'inf' });
+    }
+
     setPlaying(true);
     duration = snap.duration || 0;
     timeTotal.textContent = formatTime(duration);
+    
+    // Reset zoom, pan, and rotation
+    currentZoom = 100;
+    panX = 0;
+    panY = 0;
+    tempRotation = 0;
+    zoomBar.setValue(currentZoom);
+    mpvContainer.classList.remove('can-pan');
+    await invoke('set_mpv_property', { name: 'video-zoom', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-pan-x', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-pan-y', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-rotate', value: '0' });
+
     updatePlaylistUI(snap);
+    await updateMediaInfoDisplay();
     startPolling();
     showToast('▶ Now playing');
   } catch (e) {
@@ -234,11 +382,32 @@ export async function toggleFullscreen() {
 export async function nextVideo() {
   try {
     const snap = await invoke('next_video');
-    showPlayer(snap.filename);
+    currentFile = snap.current_file;
+    const filename = snap.filename || currentFile.split(/[\\/]/).pop();
+    showPlayer(filename);
+    
+    const ext = filename.split('.').pop().toLowerCase();
+    isImage = ['jpg','jpeg','png','webp','bmp','avif','heic'].includes(ext);
+    isGif = ext === 'gif';
+
     setPlaying(true);
     duration = snap.duration || 0;
     timeTotal.textContent = formatTime(duration);
+    
+    // Reset zoom, pan, and rotation
+    currentZoom = 100;
+    panX = 0;
+    panY = 0;
+    tempRotation = 0;
+    zoomBar.setValue(currentZoom);
+    mpvContainer.classList.remove('can-pan');
+    await invoke('set_mpv_property', { name: 'video-zoom', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-pan-x', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-pan-y', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-rotate', value: '0' });
+
     updatePlaylistUI(snap);
+    await updateMediaInfoDisplay();
     startPolling();
     showToast('⏭ Next video');
   } catch (e) {
@@ -250,11 +419,32 @@ export async function nextVideo() {
 export async function previousVideo() {
   try {
     const snap = await invoke('previous_video');
-    showPlayer(snap.filename);
+    currentFile = snap.current_file;
+    const filename = snap.filename || currentFile.split(/[\\/]/).pop();
+    showPlayer(filename);
+    
+    const ext = filename.split('.').pop().toLowerCase();
+    isImage = ['jpg','jpeg','png','webp','bmp','avif','heic'].includes(ext);
+    isGif = ext === 'gif';
+
     setPlaying(true);
     duration = snap.duration || 0;
     timeTotal.textContent = formatTime(duration);
+    
+    // Reset zoom, pan, and rotation
+    currentZoom = 100;
+    panX = 0;
+    panY = 0;
+    tempRotation = 0;
+    zoomBar.setValue(currentZoom);
+    mpvContainer.classList.remove('can-pan');
+    await invoke('set_mpv_property', { name: 'video-zoom', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-pan-x', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-pan-y', value: '0' });
+    await invoke('set_mpv_property', { name: 'video-rotate', value: '0' });
+
     updatePlaylistUI(snap);
+    await updateMediaInfoDisplay();
     startPolling();
     showToast('⏮ Previous video');
   } catch (e) {
@@ -310,6 +500,8 @@ export async function stopVideo() {
     document.title = 'Nova Player';
     dropZone.classList.add('active');
     mpvContainer.classList.add('hidden');
+    const infoDisplay = document.getElementById('file-info-display');
+    if (infoDisplay) infoDisplay.classList.add('hidden');
     showToast('■ Media stopped');
   } catch (e) {
     console.error('stop error', e);
@@ -380,4 +572,57 @@ export async function changeVolumeByDelta(delta) {
   }
 }
 
-export { setPlaying, isPlaying, duration };
+export async function updateMediaInfoDisplay() {
+  const infoDisplay = document.getElementById('file-info-display');
+  const infoDimensions = document.getElementById('info-dimensions');
+  const infoSize = document.getElementById('info-size');
+  const btnInfo = document.getElementById('btn-info');
+  
+  if (!currentFile) {
+    if (infoDisplay) infoDisplay.classList.add('hidden');
+    return;
+  }
+  
+  try {
+    const meta = await invoke('get_media_info', { path: currentFile });
+    
+    if (meta.dimensions) {
+      if (infoDimensions) infoDimensions.textContent = meta.dimensions;
+      const wrapper = document.getElementById('info-dimensions-wrapper');
+      if (wrapper) wrapper.classList.remove('hidden');
+    } else {
+      const wrapper = document.getElementById('info-dimensions-wrapper');
+      if (wrapper) wrapper.classList.add('hidden');
+    }
+    
+    if (meta.file_size) {
+      if (infoSize) infoSize.textContent = meta.file_size;
+      const wrapper = document.getElementById('info-size-wrapper');
+      if (wrapper) wrapper.classList.remove('hidden');
+    } else {
+      const wrapper = document.getElementById('info-size-wrapper');
+      if (wrapper) wrapper.classList.add('hidden');
+    }
+    
+    // Check local storage to see if info display should be visible
+    const showInfo = localStorage.getItem('show-media-info') === 'true';
+    if (showInfo) {
+      if (infoDisplay) infoDisplay.classList.remove('hidden');
+      if (btnInfo) btnInfo.classList.add('active');
+    } else {
+      if (infoDisplay) infoDisplay.classList.add('hidden');
+      if (btnInfo) btnInfo.classList.remove('active');
+    }
+  } catch (e) {
+    console.error('get_media_info error', e);
+    if (infoDisplay) infoDisplay.classList.add('hidden');
+  }
+}
+
+export function toggleMediaInfo() {
+  const showInfo = localStorage.getItem('show-media-info') === 'true';
+  localStorage.setItem('show-media-info', (!showInfo).toString());
+  updateMediaInfoDisplay();
+}
+
+export { setPlaying, isPlaying, duration, isImage, isGif, changeZoomByDelta };

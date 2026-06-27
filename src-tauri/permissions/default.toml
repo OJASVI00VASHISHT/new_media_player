@@ -21,5 +21,8 @@ allow = [
   "get_startup_file",
   "set_mpv_property",
   "set_loop_mode",
-  "log_from_frontend"
+  "log_from_frontend",
+  "rotate_image_permanently",
+  "save_image_edits",
+  "get_media_info"
 ]

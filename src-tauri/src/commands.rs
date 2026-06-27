@@ -35,10 +35,11 @@ fn basename(path: &str) -> String {
 }
 
 fn get_media_files_in_dir(dir: &std::path::Path) -> Vec<String> {
-    let mut files = Vec::new();
+    let mut files_with_time: Vec<(String, std::time::SystemTime)> = Vec::new();
     let supported_exts = [
         "mp4", "mkv", "avi", "mov", "webm", "wmv", "flv", 
-        "mp3", "flac", "ogg", "wav", "aac", "m4a", "m4v", "ts"
+        "mp3", "flac", "ogg", "wav", "aac", "m4a", "m4v", "ts",
+        "jpg", "jpeg", "png", "gif", "webp", "bmp", "avif", "heic"
     ];
     if let Ok(entries) = std::fs::read_dir(dir) {
         for entry in entries {
@@ -49,7 +50,11 @@ fn get_media_files_in_dir(dir: &std::path::Path) -> Vec<String> {
                         let ext_lower = ext.to_lowercase();
                         if supported_exts.contains(&ext_lower.as_str()) {
                             if let Some(path_str) = p.to_str() {
-                                files.push(path_str.to_string());
+                                let modified_time = entry
+                                    .metadata()
+                                    .and_then(|m| m.modified())
+                                    .unwrap_or(std::time::SystemTime::UNIX_EPOCH);
+                                files_with_time.push((path_str.to_string(), modified_time));
                             }
                         }
                     }
@@ -57,9 +62,9 @@ fn get_media_files_in_dir(dir: &std::path::Path) -> Vec<String> {
             }
         }
     }
-    // Sort alphabetically (case-insensitive)
-    files.sort_by(|a, b| a.to_lowercase().cmp(&b.to_lowercase()));
-    files
+    // Sort by Modified Time descending (newest first)
+    files_with_time.sort_by(|a, b| b.1.cmp(&a.1));
+    files_with_time.into_iter().map(|(path, _)| path).collect()
 }
 
 // ── Commands ─────────────────────────────────────────────────────────────────
@@ -516,6 +521,416 @@ pub fn log_from_frontend(
     message: String,
 ) {
     crate::log_to_file(&format!("[FRONTEND {}] {}", level, message));
+}
+
+#[tauri::command]
+pub fn rotate_image_permanently(path: String) -> Result<(), String> {
+    use little_exif::metadata::Metadata;
+    use little_exif::exif_tag::ExifTag;
+
+    let path_obj = std::path::Path::new(&path);
+    
+    // Read current metadata to find existing orientation
+    let mut current_orientation = 1;
+    let mut metadata = match Metadata::new_from_path(path_obj) {
+        Ok(m) => {
+            for tag in m.clone().into_iter() {
+                if let ExifTag::Orientation(v) = tag {
+                    if !v.is_empty() {
+                        current_orientation = v[0];
+                    }
+                }
+            }
+            m
+        },
+        Err(_) => Metadata::new(),
+    };
+
+    // 90 deg CW mapping
+    let new_orientation = match current_orientation {
+        1 => 6,
+        6 => 3,
+        3 => 8,
+        8 => 1,
+        2 => 7,
+        7 => 4,
+        4 => 5,
+        5 => 2,
+        _ => 6,
+    };
+
+    metadata.set_tag(ExifTag::Orientation(vec![new_orientation]));
+    
+    match metadata.write_to_file(path_obj) {
+        Ok(_) => {
+            crate::log_to_file(&format!("Rotated image losslessly via EXIF: {}", path));
+            return Ok(());
+        },
+        Err(e) => {
+            crate::log_to_file(&format!("EXIF rotation failed, falling back to pixel rotation: {}", e));
+        }
+    }
+
+    // Fallback: Pixel rotation using `image` crate (strips EXIF automatically, so orientation resets to 1)
+    let img = image::open(&path).map_err(|e| e.to_string())?;
+    let rotated = img.rotate90();
+    rotated.save(&path).map_err(|e| e.to_string())?;
+    crate::log_to_file(&format!("Rotated image via pixels: {}", path));
+
+    Ok(())
+}
+
+fn rotate_about_center(img: &image::DynamicImage, angle_degrees: f32) -> image::DynamicImage {
+    let angle_rad = angle_degrees.to_radians();
+    let cos_a = angle_rad.cos();
+    let sin_a = angle_rad.sin();
+    
+    let (w, h) = (img.width(), img.height());
+    let (cx, cy) = (w as f32 / 2.0, h as f32 / 2.0);
+    
+    // Compute new dimensions to fit the rotated image
+    let new_w = (w as f32 * cos_a.abs() + h as f32 * sin_a.abs()).round() as u32;
+    let new_h = (w as f32 * sin_a.abs() + h as f32 * cos_a.abs()).round() as u32;
+    
+    let ncx = new_w as f32 / 2.0;
+    let ncy = new_h as f32 / 2.0;
+    
+    let src_rgba = img.to_rgba8();
+    let mut new_img = image::ImageBuffer::new(new_w, new_h);
+    
+    for ny in 0..new_h {
+        for nx in 0..new_w {
+            let dx = nx as f32 - ncx;
+            let dy = ny as f32 - ncy;
+            
+            let ox = dx * cos_a + dy * sin_a + cx;
+            let oy = -dx * sin_a + dy * cos_a + cy;
+            
+            if ox >= 0.0 && ox < w as f32 && oy >= 0.0 && oy < h as f32 {
+                let px = ox.floor() as u32;
+                let py = oy.floor() as u32;
+                if px < w && py < h {
+                    new_img.put_pixel(nx, ny, *src_rgba.get_pixel(px, py));
+                }
+            } else {
+                new_img.put_pixel(nx, ny, image::Rgba([0, 0, 0, 0]));
+            }
+        }
+    }
+    image::DynamicImage::ImageRgba8(new_img)
+}
+
+// ── CSS Filter Helpers ───────────────────────────────────────────────────────
+
+fn hue_rotate_pixel(r: f32, g: f32, b: f32, angle_deg: f32) -> (f32, f32, f32) {
+    let theta = angle_deg.to_radians();
+    let cosval = theta.cos();
+    let sinval = theta.sin();
+    
+    // Formula from W3C Filter Effects Specification
+    let r_r = 0.213 + 0.787 * cosval - 0.213 * sinval;
+    let r_g = 0.715 - 0.715 * cosval - 0.715 * sinval;
+    let r_b = 0.072 - 0.072 * cosval + 0.928 * sinval;
+    
+    let g_r = 0.213 - 0.213 * cosval + 0.143 * sinval;
+    let g_g = 0.715 + 0.285 * cosval + 0.140 * sinval;
+    let g_b = 0.072 - 0.072 * cosval - 0.283 * sinval;
+    
+    let b_r = 0.213 - 0.213 * cosval - 0.787 * sinval;
+    let b_g = 0.715 - 0.715 * cosval + 0.715 * sinval;
+    let b_b = 0.072 + 0.928 * cosval + 0.072 * sinval;
+    
+    let rx = r_r * r + r_g * g + r_b * b;
+    let gx = g_r * r + g_g * g + g_b * b;
+    let bx = b_r * r + b_g * g + b_b * b;
+    
+    (rx, gx, bx)
+}
+
+fn saturate_pixel(r: f32, g: f32, b: f32, amount: f32) -> (f32, f32, f32) {
+    let luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    (
+        luma + (r - luma) * amount,
+        luma + (g - luma) * amount,
+        luma + (b - luma) * amount,
+    )
+}
+
+fn sepia_pixel(r: f32, g: f32, b: f32, amount: f32) -> (f32, f32, f32) {
+    let r_sepia = 0.393 * r + 0.769 * g + 0.189 * b;
+    let g_sepia = 0.349 * r + 0.686 * g + 0.168 * b;
+    let b_sepia = 0.272 * r + 0.534 * g + 0.131 * b;
+    (
+        r * (1.0 - amount) + r_sepia * amount,
+        g * (1.0 - amount) + g_sepia * amount,
+        b * (1.0 - amount) + b_sepia * amount,
+    )
+}
+
+fn grayscale_pixel(r: f32, g: f32, b: f32, amount: f32) -> (f32, f32, f32) {
+    let luma = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+    (
+        r * (1.0 - amount) + luma * amount,
+        g * (1.0 - amount) + luma * amount,
+        b * (1.0 - amount) + luma * amount,
+    )
+}
+
+#[tauri::command]
+pub fn save_image_edits(
+    path: String,
+    dest_path: Option<String>,
+    rotation: f32,
+    brightness: f32,
+    contrast: f32,
+    exposure: f32,
+    highlights: f32,
+    shadows: f32,
+    vignette: f32,
+    flip_h: bool,
+    flip_v: bool,
+    filter: String,
+) -> Result<(), String> {
+    crate::log_to_file(&format!(
+        "save_image_edits: path={}, dest={:?}, rot={}, br={}, co={}, ex={}, hl={}, sd={}, vig={}, fh={}, fv={}, filter={}",
+        path, dest_path, rotation, brightness, contrast, exposure, highlights, shadows, vignette, flip_h, flip_v, filter
+    ));
+
+    // Load original image
+    let mut img = image::open(&path).map_err(|e| e.to_string())?;
+
+    // Apply flip horizontal / vertical
+    if flip_h {
+        img = img.fliph();
+    }
+    if flip_v {
+        img = img.flipv();
+    }
+
+    // Apply rotation
+    let rot = rotation % 360.0;
+    if rot.abs() > 0.01 {
+        if (rot - 90.0).abs() < 0.01 {
+            img = img.rotate90();
+        } else if (rot - 180.0).abs() < 0.01 || (rot + 180.0).abs() < 0.01 {
+            img = img.rotate180();
+        } else if (rot - 270.0).abs() < 0.01 || (rot + 90.0).abs() < 0.01 {
+            img = img.rotate270();
+        } else {
+            img = rotate_about_center(&img, rot);
+        }
+    }
+
+    // Apply pixel adjustments: brightness, contrast, exposure, highlights, shadows, vignette, preset filter
+    if brightness.abs() > 0.01
+        || contrast.abs() > 0.01
+        || exposure.abs() > 0.01
+        || highlights.abs() > 0.01
+        || shadows.abs() > 0.01
+        || vignette.abs() > 0.01
+        || filter != "none"
+    {
+        let mut rgba_img = img.to_rgba8();
+        let (w, h) = rgba_img.dimensions();
+        let cx = w as f32 / 2.0;
+        let cy = h as f32 / 2.0;
+        let max_dist = (cx.powi(2) + cy.powi(2)).sqrt();
+
+        // 1. Brightness factor (matches CSS brightness(X%))
+        let brightness_factor = (100.0 + brightness) / 100.0;
+
+        // 2. Contrast factor (matches CSS contrast(X%))
+        let contrast_factor = (100.0 + contrast) / 100.0;
+
+        // 3. Exposure factor (matches CSS exposure preview mapping to brightness)
+        let exposure_factor = (100.0 + exposure) / 100.0;
+
+        // 4. Highlights / Shadows (represented as saturate)
+        let has_hl_sd = highlights.abs() > 0.01 || shadows.abs() > 0.01;
+        let sat_factor = if has_hl_sd {
+            (100.0 + (highlights - shadows) * 0.3) / 100.0
+        } else {
+            1.0
+        };
+
+        // 5. Vignette intensity
+        let vignette_strength = vignette / 100.0;
+
+        for y in 0..h {
+            for x in 0..w {
+                let pixel = rgba_img.get_pixel_mut(x, y);
+                let mut r = pixel[0] as f32;
+                let mut g = pixel[1] as f32;
+                let mut b = pixel[2] as f32;
+                let a = pixel[3];
+
+                // Step 1: Brightness
+                r *= brightness_factor;
+                g *= brightness_factor;
+                b *= brightness_factor;
+
+                // Step 2: Contrast
+                r = (r - 127.5) * contrast_factor + 127.5;
+                g = (g - 127.5) * contrast_factor + 127.5;
+                b = (b - 127.5) * contrast_factor + 127.5;
+
+                // Step 3: Exposure
+                r *= exposure_factor;
+                g *= exposure_factor;
+                b *= exposure_factor;
+
+                // Step 4: Highlights / Shadows (saturate)
+                if has_hl_sd {
+                    let (rx, gx, bx) = saturate_pixel(r, g, b, sat_factor);
+                    r = rx; g = gx; b = bx;
+                }
+
+                // Step 5: Preset Filters
+                match filter.as_str() {
+                    "vivid" => {
+                        // saturate(1.8) contrast(1.1)
+                        let (rx, gx, bx) = saturate_pixel(r, g, b, 1.8);
+                        r = (rx - 127.5) * 1.1 + 127.5;
+                        g = (gx - 127.5) * 1.1 + 127.5;
+                        b = (bx - 127.5) * 1.1 + 127.5;
+                    }
+                    "warm" => {
+                        // sepia(0.35) saturate(1.3) hue-rotate(-10deg)
+                        let (rx, gx, bx) = sepia_pixel(r, g, b, 0.35);
+                        let (rx, gx, bx) = saturate_pixel(rx, gx, bx, 1.3);
+                        let (rx, gx, bx) = hue_rotate_pixel(rx, gx, bx, -10.0);
+                        r = rx; g = gx; b = bx;
+                    }
+                    "cool" => {
+                        // saturate(1.2) hue-rotate(20deg) contrast(0.95)
+                        let (rx, gx, bx) = saturate_pixel(r, g, b, 1.2);
+                        let (rx, gx, bx) = hue_rotate_pixel(rx, gx, bx, 20.0);
+                        r = (rx - 127.5) * 0.95 + 127.5;
+                        g = (gx - 127.5) * 0.95 + 127.5;
+                        b = (bx - 127.5) * 0.95 + 127.5;
+                    }
+                    "mono" => {
+                        // grayscale(1) contrast(1.25)
+                        let (rx, gx, bx) = grayscale_pixel(r, g, b, 1.0);
+                        r = (rx - 127.5) * 1.25 + 127.5;
+                        g = (gx - 127.5) * 1.25 + 127.5;
+                        b = (bx - 127.5) * 1.25 + 127.5;
+                    }
+                    "vintage" => {
+                        // sepia(0.55) contrast(0.85) brightness(1.05)
+                        let (rx, gx, bx) = sepia_pixel(r, g, b, 0.55);
+                        let rx = (rx - 127.5) * 0.85 + 127.5;
+                        let gx = (gx - 127.5) * 0.85 + 127.5;
+                        let bx = (bx - 127.5) * 0.85 + 127.5;
+                        r = rx * 1.05;
+                        g = gx * 1.05;
+                        b = bx * 1.05;
+                    }
+                    _ => {}
+                }
+
+                // Step 6: Vignette (overlay radial gradient starting at 40% distance)
+                if vignette_strength > 0.0 {
+                    let dx = x as f32 - cx;
+                    let dy = y as f32 - cy;
+                    let dist = (dx.powi(2) + dy.powi(2)).sqrt();
+                    let d = dist / max_dist;
+                    if d > 0.4 {
+                        let overlay_opacity = (((d - 0.4) / 0.6) * vignette_strength).clamp(0.0, 1.0);
+                        r *= 1.0 - overlay_opacity;
+                        g *= 1.0 - overlay_opacity;
+                        b *= 1.0 - overlay_opacity;
+                    }
+                }
+
+                pixel[0] = r.clamp(0.0, 255.0) as u8;
+                pixel[1] = g.clamp(0.0, 255.0) as u8;
+                pixel[2] = b.clamp(0.0, 255.0) as u8;
+                pixel[3] = a;
+            }
+        }
+        img = image::DynamicImage::ImageRgba8(rgba_img);
+    }
+
+    let save_path = dest_path.unwrap_or(path);
+    img.save(&save_path).map_err(|e| e.to_string())?;
+
+    crate::log_to_file(&format!("Successfully saved image edits to: {}", save_path));
+    Ok(())
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct MediaInfo {
+    pub dimensions: Option<String>,
+    pub file_size: Option<String>,
+}
+
+#[tauri::command]
+pub fn get_media_info(
+    path: String,
+    mpv_state: State<Mutex<MpvPlayer>>,
+) -> Result<MediaInfo, String> {
+    let path_buf = std::path::Path::new(&path);
+    if !path_buf.exists() {
+        return Err("File does not exist".to_string());
+    }
+
+    // 1. Get file size
+    let file_size = if let Ok(meta) = std::fs::metadata(path_buf) {
+        let bytes = meta.len();
+        if bytes < 1024 {
+            Some(format!("{} B", bytes))
+        } else if bytes < 1024 * 1024 {
+            Some(format!("{:.1} KB", bytes as f32 / 1024.0))
+        } else {
+            Some(format!("{:.1} MB", bytes as f32 / (1024.0 * 1024.0)))
+        }
+    } else {
+        None
+    };
+
+    // 2. Get dimensions
+    let mut dimensions = None;
+
+    // Check extension
+    if let Some(ext) = path_buf.extension().and_then(|e| e.to_str()) {
+        let ext_lower = ext.to_lowercase();
+        let is_img = ["jpg", "jpeg", "png", "webp", "bmp", "avif", "heic"].contains(&ext_lower.as_str());
+        if is_img {
+            if let Ok((w, h)) = image::image_dimensions(path_buf) {
+                dimensions = Some(format!("{} x {}", w, h));
+            }
+        }
+    }
+
+    // Fallback: If dimensions still None, try to get from MPV properties
+    if dimensions.is_none() {
+        if let Ok(mpv_lock) = mpv_state.lock() {
+            let handle = mpv_lock.handle.lock().unwrap();
+            // Try video-params/w and video-params/h first
+            let w: Result<i64, _> = handle.get_property("video-params/w");
+            let h: Result<i64, _> = handle.get_property("video-params/h");
+            if let (Ok(w_val), Ok(h_val)) = (w, h) {
+                if w_val > 0 && h_val > 0 {
+                    dimensions = Some(format!("{} x {}", w_val, h_val));
+                }
+            } else {
+                // Try width and height properties
+                let w: Result<i64, _> = handle.get_property("width");
+                let h: Result<i64, _> = handle.get_property("height");
+                if let (Ok(w_val), Ok(h_val)) = (w, h) {
+                    if w_val > 0 && h_val > 0 {
+                        dimensions = Some(format!("{} x {}", w_val, h_val));
+                    }
+                }
+            }
+        }
+    }
+
+    Ok(MediaInfo {
+        dimensions,
+        file_size,
+    })
 }
 
 #[cfg(test)]

@@ -33,6 +33,9 @@ impl MpvPlayer {
         mpv.set_property("osd-level", 0_i64)?;
         mpv.set_property("keep-open", "yes")?;
         mpv.set_property("idle", "yes")?;
+        
+        // Image support
+        mpv.set_property("image-display-duration", "inf")?;
 
         let log_path = std::env::current_exe()
             .ok()

@@ -22,15 +22,32 @@ import {
   showMediaInfo,
   changeTheme,
   changeVolumeByDelta,
+  changeZoomByDelta,
+  isImage,
+  isGif,
+  currentFile,
+  toggleMediaInfo,
+  updateMediaInfoDisplay
 } from './player.js';
 
 import { showToast } from './ui.js';
+import { enterEditMode } from './edit-mode.js';
 
 // ── Init Window Controls (minimize / maximize / close) ────────
 initWindowControls();
 
 // ── Open File Button ──────────────────────────────────────────
 document.getElementById('btn-open').addEventListener('click', openFileDialog);
+document.getElementById('btn-info').addEventListener('click', toggleMediaInfo);
+
+document.addEventListener('wheel', async (e) => {
+  if (isImage || isGif || e.ctrlKey) {
+    e.preventDefault();
+    // Use a small multiplier for smooth zoom on trackpads, which fire many small deltaY events
+    const zoomStep = -(e.deltaY * 0.2);
+    await changeZoomByDelta(zoomStep);
+  }
+}, { passive: false });
 
 // ── Play / Pause ──────────────────────────────────────────────
 document.getElementById('btn-play-pause').addEventListener('click', togglePlayPause);
@@ -96,11 +113,27 @@ document.addEventListener('keydown', async (e) => {
       break;
     case 'ArrowLeft':
       e.preventDefault();
-      await seekRelative(e.shiftKey ? -30 : -5);
+      if (isImage || isGif) {
+        await previousVideo();
+      } else {
+        await seekRelative(e.shiftKey ? -30 : -5);
+      }
       break;
     case 'ArrowRight':
       e.preventDefault();
-      await seekRelative(e.shiftKey ? 30 : 5);
+      if (isImage || isGif) {
+        await nextVideo();
+      } else {
+        await seekRelative(e.shiftKey ? 30 : 5);
+      }
+      break;
+    case 'ArrowUp':
+      e.preventDefault();
+      await changeVolumeByDelta(10);
+      break;
+    case 'ArrowDown':
+      e.preventDefault();
+      await changeVolumeByDelta(-10);
       break;
     case 'f':
     case 'F11':
@@ -141,6 +174,7 @@ document.addEventListener('keydown', async (e) => {
 
 // ── Mouse show/hide overlay on video ─────────────────────────
 const mpvCon = document.getElementById('mpv-container');
+const vidCon = document.getElementById('video-container');
 let mouseMoveTimer = null;
 
 mpvCon.addEventListener('mousemove', () => {
@@ -148,6 +182,11 @@ mpvCon.addEventListener('mousemove', () => {
   overlay.classList.remove('hidden');
   clearTimeout(mouseMoveTimer);
   mouseMoveTimer = setTimeout(() => overlay.classList.add('hidden'), 2500);
+});
+
+vidCon.addEventListener('mouseleave', () => {
+  const overlay = document.getElementById('overlay');
+  overlay.classList.add('hidden');
 });
 
 // ── Custom Context Menu ───────────────────────────────────────
@@ -244,6 +283,7 @@ document.getElementById('ctx-speed-down').addEventListener('click', async () => 
 
 // ── Startup File Check ────────────────────────────────────────
 (async () => {
+  await updateMediaInfoDisplay();
   try {
     const { invoke } = window.__TAURI__.core;
     const startupFile = await invoke('get_startup_file');
@@ -427,10 +467,18 @@ document.getElementById('menu-sub-large').addEventListener('click', async () => 
   await setSubtitleSize('1.5');
 });
 
-// Tools
-document.getElementById('menu-tools-info').addEventListener('click', async () => {
+// Edit
+document.getElementById('btn-menu-edit')?.addEventListener('click', () => {
   closeAllMenus();
-  await showMediaInfo();
+  if (!currentFile) {
+    showToast('No media playing.');
+    return;
+  }
+  if (!isImage) {
+    showToast('Editing is only supported for images.');
+    return;
+  }
+  enterEditMode(currentFile);
 });
 
 // View
