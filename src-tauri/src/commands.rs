@@ -933,6 +933,82 @@ pub fn get_media_info(
     })
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct SubtitleTrack {
+    pub id: i64,
+    pub title: Option<String>,
+    pub lang: Option<String>,
+    pub codec: Option<String>,
+    pub selected: bool,
+}
+
+#[tauri::command]
+pub fn get_subtitle_tracks(
+    mpv_state: State<Mutex<MpvPlayer>>,
+) -> Result<Vec<SubtitleTrack>, String> {
+    let mpv = mpv_state.lock().map_err(|e| e.to_string())?;
+    let handle = mpv.handle.lock().map_err(|e| e.to_string())?;
+    
+    let count: i64 = handle.get_property("track-list/count").unwrap_or(0);
+    let mut tracks = Vec::new();
+    
+    for i in 0..count {
+        let track_type: String = handle.get_property(&format!("track-list/{}/type", i)).unwrap_or_default();
+        if track_type == "sub" {
+            let id: i64 = handle.get_property(&format!("track-list/{}/id", i)).unwrap_or(0);
+            let title: Option<String> = handle.get_property(&format!("track-list/{}/title", i)).ok();
+            let lang: Option<String> = handle.get_property(&format!("track-list/{}/lang", i)).ok();
+            let codec: Option<String> = handle.get_property(&format!("track-list/{}/codec", i)).ok();
+            let selected: bool = handle.get_property(&format!("track-list/{}/selected", i)).unwrap_or(false);
+            
+            tracks.push(SubtitleTrack {
+                id,
+                title,
+                lang,
+                codec,
+                selected,
+            });
+        }
+    }
+    
+    Ok(tracks)
+}
+
+#[tauri::command]
+pub fn get_mpv_property(
+    name: String,
+    mpv_state: State<Mutex<MpvPlayer>>,
+) -> Result<String, String> {
+    let mpv = mpv_state.lock().map_err(|e| e.to_string())?;
+    let handle = mpv.handle.lock().map_err(|e| e.to_string())?;
+    
+    if let Ok(val) = handle.get_property::<String>(&name) {
+        return Ok(val);
+    }
+    if let Ok(val) = handle.get_property::<bool>(&name) {
+        return Ok(val.to_string());
+    }
+    if let Ok(val) = handle.get_property::<i64>(&name) {
+        return Ok(val.to_string());
+    }
+    if let Ok(val) = handle.get_property::<f64>(&name) {
+        return Ok(val.to_string());
+    }
+    
+    Err(format!("Property {} not found or unsupported type", name))
+}
+
+#[tauri::command]
+pub fn reload_subtitles(
+    mpv_state: State<Mutex<MpvPlayer>>,
+) -> Result<(), String> {
+    let mpv = mpv_state.lock().map_err(|e| e.to_string())?;
+    let handle = mpv.handle.lock().map_err(|e| e.to_string())?;
+    handle.command("sub-reload", &[]).map_err(|e| e.to_string())?;
+    Ok(())
+}
+
+
 #[cfg(test)]
 mod tests {
     use super::*;

@@ -88,12 +88,30 @@
       <!-- Top Menu Bar -->
       <nav class="top-menu-bar" id="top-menu-bar">
         <div class="menu-trigger-container">
-          <button class="menu-trigger" data-menu="media">Media</button>
-          <div class="menu-dropdown hidden" id="dropdown-media">
-            <div class="menu-item" id="menu-media-open"><span class="menu-icon">📂</span><span class="menu-text">Open File...</span><span class="menu-shortcut">Ctrl+O</span></div>
-            <div class="menu-item" id="menu-media-close"><span class="menu-icon">❌</span><span class="menu-text">Close Media</span></div>
+          <button class="menu-trigger" data-menu="options">Options</button>
+          <div class="menu-dropdown hidden" id="dropdown-options">
+            <div class="menu-item" id="menu-options-dialog"><span class="menu-icon">⚙️</span><span class="menu-text">Options...</span></div>
+            <div class="menu-item" id="menu-options-styles"><span class="menu-icon">🎨</span><span class="menu-text">Styles...</span></div>
+            <div class="menu-item" id="menu-options-reload"><span class="menu-icon">🔄</span><span class="menu-text">Reload Subtitles</span></div>
+            <div class="menu-item" id="menu-options-hide"><span class="menu-icon"></span><span class="menu-text">Hide Subtitles</span></div>
+            <div class="menu-item" id="menu-options-override-default"><span class="menu-icon"></span><span class="menu-text">Override Default Style</span></div>
+            <div class="menu-item" id="menu-options-override-all"><span class="menu-icon"></span><span class="menu-text">Override All Styles</span></div>
             <div class="menu-divider"></div>
-            <div class="menu-item" id="menu-media-exit"><span class="menu-icon">🚪</span><span class="menu-text">Exit</span></div>
+            <div class="menu-item-parent" id="menu-options-tracks-parent">
+              <div class="menu-item">
+                <span class="menu-icon">🗣️</span>
+                <span class="menu-text">Subtitle Tracks</span>
+                <span class="menu-arrow">▶</span>
+              </div>
+              <div class="menu-submenu" id="menu-options-tracks-list">
+                <div class="menu-item disabled">No subtitles</div>
+              </div>
+            </div>
+            <div class="menu-divider"></div>
+            <div class="menu-item" id="menu-options-open"><span class="menu-icon">📂</span><span class="menu-text">Open File...</span><span class="menu-shortcut">Ctrl+O</span></div>
+            <div class="menu-item" id="menu-options-close"><span class="menu-icon">❌</span><span class="menu-text">Close Media</span></div>
+            <div class="menu-divider"></div>
+            <div class="menu-item" id="menu-options-exit"><span class="menu-icon">🚪</span><span class="menu-text">Exit</span></div>
           </div>
         </div>
         <div class="menu-trigger-container">

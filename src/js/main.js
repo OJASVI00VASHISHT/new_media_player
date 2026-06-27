@@ -335,6 +335,9 @@ menuTriggers.forEach(trigger => {
       dropdown.classList.remove('hidden');
       trigger.classList.add('active');
       activeMenuTrigger = trigger;
+      if (menuName === 'options') {
+        updateOptionsDropdownState();
+      }
     }
   });
 
@@ -346,6 +349,9 @@ menuTriggers.forEach(trigger => {
       dropdown.classList.remove('hidden');
       trigger.classList.add('active');
       activeMenuTrigger = trigger;
+      if (menuName === 'options') {
+        updateOptionsDropdownState();
+      }
     }
   });
 });
@@ -365,16 +371,68 @@ document.addEventListener('keydown', (e) => {
 });
 
 // ── Top Options Menu Action Handlers ──────────────────────────
-// Media
-document.getElementById('menu-media-open').addEventListener('click', async () => {
+// Options
+document.getElementById('menu-options-dialog').addEventListener('click', async () => {
+  closeAllMenus();
+  openOptionsWindow('');
+});
+document.getElementById('menu-options-styles').addEventListener('click', async () => {
+  closeAllMenus();
+  openOptionsWindow('#subtitles');
+});
+document.getElementById('menu-options-reload').addEventListener('click', async () => {
+  closeAllMenus();
+  try {
+    await window.__TAURI__.core.invoke('reload_subtitles');
+    showToast('🔄 Subtitles reloaded');
+  } catch (e) {
+    console.error('reload subtitles error', e);
+  }
+});
+document.getElementById('menu-options-hide').addEventListener('click', async () => {
+  closeAllMenus();
+  try {
+    const active = await window.__TAURI__.core.invoke('get_mpv_property', { name: 'sub-visibility' });
+    const nextVal = active === 'yes' ? 'no' : 'yes';
+    await window.__TAURI__.core.invoke('set_mpv_property', { name: 'sub-visibility', value: nextVal });
+    showToast(nextVal === 'yes' ? '👁️ Subtitles visible' : '👁️ Subtitles hidden');
+  } catch (e) {
+    console.error('toggle sub visibility error', e);
+  }
+});
+document.getElementById('menu-options-override-default').addEventListener('click', async () => {
+  closeAllMenus();
+  try {
+    const override = await window.__TAURI__.core.invoke('get_mpv_property', { name: 'sub-ass-override' });
+    const nextVal = override === 'yes' ? 'no' : 'yes';
+    await window.__TAURI__.core.invoke('set_mpv_property', { name: 'sub-ass-override', value: nextVal });
+    showToast(nextVal === 'yes' ? '✔️ Default styles overridden' : '❌ Respect file styles');
+  } catch (e) {
+    console.error(e);
+  }
+});
+document.getElementById('menu-options-override-all').addEventListener('click', async () => {
+  closeAllMenus();
+  try {
+    const override = await window.__TAURI__.core.invoke('get_mpv_property', { name: 'sub-ass-override' });
+    const nextVal = override === 'force' ? 'no' : 'force';
+    await window.__TAURI__.core.invoke('set_mpv_property', { name: 'sub-ass-override', value: nextVal });
+    showToast(nextVal === 'force' ? '✔️ All styles forced override' : '❌ Respect file styles');
+  } catch (e) {
+    console.error(e);
+  }
+});
+
+// File Loader retained under Options
+document.getElementById('menu-options-open').addEventListener('click', async () => {
   closeAllMenus();
   await openFileDialog();
 });
-document.getElementById('menu-media-close').addEventListener('click', async () => {
+document.getElementById('menu-options-close').addEventListener('click', async () => {
   closeAllMenus();
   await stopVideo();
 });
-document.getElementById('menu-media-exit').addEventListener('click', () => {
+document.getElementById('menu-options-exit').addEventListener('click', () => {
   const { getCurrentWindow } = window.__TAURI__.window;
   getCurrentWindow().close();
 });
@@ -564,4 +622,115 @@ repeatItems.forEach(item => {
     repeatDropdown.classList.add('hidden');
   });
 });
+
+// ── Options Window & Subtitle Tracks Actions ──────────────────
+async function openOptionsWindow(hash = '') {
+  const { WebviewWindow } = window.__TAURI__.webviewWindow;
+  const allWindows = await WebviewWindow.getAll();
+  const existing = allWindows.find(w => w.label === 'options');
+  if (existing) {
+    if (hash) {
+      existing.evaluateJavaScript(`window.location.hash = "${hash}"; window.dispatchEvent(new HashChangeEvent("hashchange"));`);
+    }
+    await existing.setFocus();
+  } else {
+    new WebviewWindow('options', {
+      url: `options.html${hash}`,
+      title: 'Nova Player - Options',
+      width: 920,
+      height: 700,
+      minWidth: 700,
+      minHeight: 500,
+      decorations: true,
+      resizable: true,
+      center: true,
+    });
+  }
+}
+
+async function updateOptionsDropdownState() {
+  const { invoke } = window.__TAURI__.core;
+  
+  // 1. Update checkmarks for override/visibility
+  try {
+    const subVis = await invoke('get_mpv_property', { name: 'sub-visibility' });
+    const override = await invoke('get_mpv_property', { name: 'sub-ass-override' });
+    
+    document.querySelector('#menu-options-hide .menu-icon').textContent = subVis === 'no' ? '✓' : '';
+    document.querySelector('#menu-options-override-default .menu-icon').textContent = override === 'yes' ? '✓' : '';
+    document.querySelector('#menu-options-override-all .menu-icon').textContent = override === 'force' ? '✓' : '';
+  } catch (e) {
+    console.error('Failed to get options states:', e);
+  }
+
+  // 2. Fetch and populate subtitle tracks
+  try {
+    const tracks = await invoke('get_subtitle_tracks');
+    const listEl = document.getElementById('menu-options-tracks-list');
+    listEl.innerHTML = '';
+    
+    if (tracks.length === 0) {
+      const emptyItem = document.createElement('div');
+      emptyItem.className = 'menu-item disabled';
+      emptyItem.innerHTML = '<span class="menu-icon"></span><span class="menu-text">No subtitle tracks</span>';
+      listEl.appendChild(emptyItem);
+      return;
+    }
+    
+    // Add disable subtitles item
+    const noSubItem = document.createElement('div');
+    noSubItem.className = 'menu-item';
+    const isNoSubSelected = !tracks.some(t => t.selected);
+    noSubItem.innerHTML = `<span class="menu-icon">${isNoSubSelected ? '✓' : ''}</span><span class="menu-text">Disable Subtitles</span>`;
+    noSubItem.addEventListener('click', async () => {
+      closeAllMenus();
+      await invoke('set_mpv_property', { name: 'sid', value: 'no' });
+      showToast('👁️ Subtitles disabled');
+    });
+    listEl.appendChild(noSubItem);
+    
+    // Divider
+    const div = document.createElement('div');
+    div.className = 'menu-divider';
+    listEl.appendChild(div);
+    
+    // Add each track
+    tracks.forEach(track => {
+      const item = document.createElement('div');
+      item.className = 'menu-item';
+      
+      const langLabel = track.lang ? track.lang.toUpperCase() : 'UNKNOWN';
+      const titleLabel = track.title ? ` - ${track.title}` : '';
+      const codecLabel = track.codec ? ` [${track.codec}]` : '';
+      const label = `${langLabel}${titleLabel}${codecLabel}`;
+      
+      item.innerHTML = `<span class="menu-icon">${track.selected ? '✓' : ''}</span><span class="menu-text">S: ${label}</span>`;
+      item.addEventListener('click', async () => {
+        closeAllMenus();
+        await invoke('set_mpv_property', { name: 'sid', value: track.id.toString() });
+        showToast(`🗣️ Subtitle track set: ${langLabel}`);
+      });
+      
+      listEl.appendChild(item);
+    });
+  } catch (e) {
+    console.error('Failed to get subtitle tracks:', e);
+  }
+}
+
+// Listen to options-changed events from separate options window
+if (window.__TAURI__ && window.__TAURI__.event) {
+  window.__TAURI__.event.listen('options-changed', async () => {
+    try {
+      const { invoke } = window.__TAURI__.core;
+      const vol = await invoke('get_mpv_property', { name: 'volume' });
+      if (volumeBar) {
+        volumeBar.setValue(Math.round(parseFloat(vol)));
+      }
+    } catch (e) {
+      console.error('options-changed sync error', e);
+    }
+  });
+}
+
 

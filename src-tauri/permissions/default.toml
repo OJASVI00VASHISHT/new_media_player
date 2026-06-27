@@ -24,5 +24,8 @@ allow = [
   "log_from_frontend",
   "rotate_image_permanently",
   "save_image_edits",
-  "get_media_info"
+  "get_media_info",
+  "get_subtitle_tracks",
+  "get_mpv_property",
+  "reload_subtitles"
 ]

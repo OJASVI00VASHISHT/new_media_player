@@ -127,6 +127,9 @@ pub fn run() {
             commands::rotate_image_permanently,
             commands::save_image_edits,
             commands::get_media_info,
+            commands::get_subtitle_tracks,
+            commands::get_mpv_property,
+            commands::reload_subtitles,
         ])
         .setup(|app| {
             let window = app.get_webview_window("main").unwrap();

@@ -1,0 +1,712 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nova Player - Options</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles/options.css">
+</head>
+<body>
+  <div class="options-container">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <span class="logo-icon">⚙️</span>
+        <span class="logo-text">Preferences</span>
+      </div>
+      <nav class="tabs">
+        <button class="tab-btn active" data-tab="playback">⏱️ Playback</button>
+        <button class="tab-btn" data-tab="audio">🔊 Audio</button>
+        <button class="tab-btn" data-tab="video">🎬 Video</button>
+        <button class="tab-btn" data-tab="subtitles">📝 Subtitles</button>
+      </nav>
+    </aside>
+
+    <!-- Content Area -->
+    <main class="content">
+      <!-- Playback Tab -->
+      <section id="tab-playback" class="tab-panel active">
+        <h2>Playback Settings</h2>
+        <div class="panel-grid">
+          <div class="card">
+            <h3>Startup & Resuming</h3>
+            <div class="control-group checkbox-row">
+              <input type="checkbox" id="play-resume">
+              <label for="play-resume">Resume playback position (remember last file position)</label>
+            </div>
+            <div class="control-group checkbox-row">
+              <input type="checkbox" id="play-pause-minimize" checked>
+              <label for="play-pause-minimize">Pause playback when player is minimized</label>
+            </div>
+            <div class="control-group checkbox-row">
+              <input type="checkbox" id="play-auto-next" checked>
+              <label for="play-auto-next">Automatically play next file in directory</label>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Playback Speed</h3>
+            <div class="control-group row-align">
+              <label for="play-default-speed">Default speed:</label>
+              <div class="input-unit">
+                <input type="number" id="play-default-speed" min="0.1" max="5.0" step="0.05" value="1.0">
+                <span class="unit">x</span>
+              </div>
+            </div>
+            <div class="control-group checkbox-row">
+              <input type="checkbox" id="play-remember-speed">
+              <label for="play-remember-speed">Remember playback speed across sessions</label>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Navigation & Seek Steps</h3>
+            <div class="control-group row-align">
+              <label for="play-seek-forward">Forward skip:</label>
+              <div class="input-unit">
+                <input type="number" id="play-seek-forward" min="1" max="120" value="5">
+                <span class="unit">sec</span>
+              </div>
+            </div>
+            <div class="control-group row-align">
+              <label for="play-seek-backward">Backward skip:</label>
+              <div class="input-unit">
+                <input type="number" id="play-seek-backward" min="1" max="120" value="5">
+                <span class="unit">sec</span>
+              </div>
+            </div>
+            <div class="control-group row-align">
+              <label for="play-loop-mode">Default loop mode:</label>
+              <select id="play-loop-mode">
+                <option value="no">None</option>
+                <option value="inf">Loop Single File</option>
+                <option value="playlist">Loop Playlist</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Audio Tab -->
+      <section id="tab-audio" class="tab-panel">
+        <h2>Audio Settings</h2>
+        <div class="panel-grid">
+          <div class="card">
+            <h3>Volume & Output</h3>
+            <div class="control-group">
+              <div class="row-space">
+                <label for="audio-volume">Volume Level:</label>
+                <span id="audio-volume-display" class="badge">100%</span>
+              </div>
+              <input type="range" id="audio-volume" min="0" max="200" value="100">
+            </div>
+            <div class="control-group row-align">
+              <label for="audio-channels">Audio Channels:</label>
+              <select id="audio-channels">
+                <option value="auto">Auto-detect</option>
+                <option value="stereo">Stereo</option>
+                <option value="mono">Mono</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <label for="audio-device">Audio Device:</label>
+              <select id="audio-device" class="full-width">
+                <option value="auto">Default System Output</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Image 1 Options: Stereo Crossfeed -->
+          <div class="card">
+            <h3>Headphone Crossfeed (Binaural Audio)</h3>
+            <div class="control-group checkbox-row">
+              <input type="checkbox" id="audio-crossfeed">
+              <label for="audio-crossfeed">Enable stereo crossfeed (for headphones)</label>
+            </div>
+            <div class="btn-group">
+              <button type="button" class="btn" id="btn-crossfeed-moy">C. Moy (Default)</button>
+              <button type="button" class="btn" id="btn-crossfeed-meier">J. Meier</button>
+            </div>
+            <div class="control-group">
+              <div class="row-space">
+                <label for="audio-crossfeed-cutoff">Cut-off Frequency:</label>
+                <span id="audio-crossfeed-cutoff-val">700 Hz</span>
+              </div>
+              <input type="range" id="audio-crossfeed-cutoff" min="300" max="2000" step="50" value="700">
+            </div>
+            <div class="control-group">
+              <div class="row-space">
+                <label for="audio-crossfeed-level">Feed Level:</label>
+                <span id="audio-crossfeed-level-val">6.0 dB</span>
+              </div>
+              <input type="range" id="audio-crossfeed-level" min="1.0" max="15.0" step="0.5" value="6.0">
+            </div>
+          </div>
+
+          <!-- Image 2 Options: Switching & Normalize -->
+          <div class="card">
+            <h3>Audio Processing & Dynamic Compression</h3>
+            <div class="control-group checkbox-row">
+              <input type="checkbox" id="audio-switcher">
+              <label for="audio-switcher">Enable built-in audio switcher filter (requires restart)</label>
+            </div>
+            <div class="control-group checkbox-row">
+              <input type="checkbox" id="audio-normalize">
+              <label for="audio-normalize">Normalize (Dynamic Range Compression)</label>
+            </div>
+            <div class="control-group row-align">
+              <label for="audio-max-amp">Max amplification:</label>
+              <input type="number" id="audio-max-amp" min="100" max="1000" step="50" value="400">
+              <span class="unit">%</span>
+            </div>
+            <div class="control-group checkbox-row">
+              <input type="checkbox" id="audio-regain" checked>
+              <label for="audio-regain">Regain volume</label>
+            </div>
+            <div class="control-group">
+              <div class="row-space">
+                <label for="audio-boost">Audio Boost:</label>
+                <span id="audio-boost-val" class="badge">0 dB</span>
+              </div>
+              <input type="range" id="audio-boost" min="0" max="20" value="0">
+            </div>
+            <div class="control-group checkbox-row">
+              <input type="checkbox" id="audio-delay-enable">
+              <label for="audio-delay-enable">Audio time shift (delay):</label>
+              <input type="number" id="audio-delay-ms" value="0" step="50" style="width:80px;">
+              <span class="unit">ms</span>
+            </div>
+            <div class="control-group checkbox-row">
+              <input type="checkbox" id="audio-channel-map">
+              <label for="audio-channel-map">Enable custom channel mapping</label>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Video Tab -->
+      <section id="tab-video" class="tab-panel">
+        <h2>Video Settings</h2>
+        <div class="panel-grid">
+          <div class="card">
+            <h3>Hardware & Rendering</h3>
+            <div class="control-group row-align">
+              <label for="video-hwdec">Hardware Decoding:</label>
+              <select id="video-hwdec">
+                <option value="auto">Auto (Hardware accelerated)</option>
+                <option value="no">Software decoding (CPU)</option>
+                <option value="d3d11va">Direct3D 11 (Windows Native)</option>
+                <option value="dxva2">DXVA2</option>
+              </select>
+            </div>
+            <div class="control-group row-align">
+              <label for="video-renderer">Video Renderer:</label>
+              <select id="video-renderer">
+                <option value="gpu">GPU Renderer (Standard)</option>
+                <option value="gpu-next">GPU Next (Experimental)</option>
+              </select>
+            </div>
+            <div class="control-group row-align">
+              <label for="video-sync">VSync Mode:</label>
+              <select id="video-sync">
+                <option value="display-resample">Display Resample (Smooth)</option>
+                <option value="audio">Audio Sync</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Color settings (brightness/contrast/saturation/gamma) -->
+          <div class="card">
+            <h3>Image Adjustments & Colors</h3>
+            <div class="control-group">
+              <div class="row-space">
+                <label for="video-brightness">Brightness:</label>
+                <span id="video-brightness-val">0</span>
+              </div>
+              <input type="range" id="video-brightness" min="-100" max="100" value="0">
+            </div>
+            <div class="control-group">
+              <div class="row-space">
+                <label for="video-contrast">Contrast:</label>
+                <span id="video-contrast-val">0</span>
+              </div>
+              <input type="range" id="video-contrast" min="-100" max="100" value="0">
+            </div>
+            <div class="control-group">
+              <div class="row-space">
+                <label for="video-saturation">Saturation:</label>
+                <span id="video-saturation-val">0</span>
+              </div>
+              <input type="range" id="video-saturation" min="-100" max="100" value="0">
+            </div>
+            <div class="control-group">
+              <div class="row-space">
+                <label for="video-gamma">Gamma:</label>
+                <span id="video-gamma-val">0</span>
+              </div>
+              <input type="range" id="video-gamma" min="-100" max="100" value="0">
+            </div>
+          </div>
+
+          <!-- Video gimmicks -->
+          <div class="card">
+            <h3>Aspect Ratio & Gimmicks</h3>
+            <div class="control-group row-align">
+              <label for="video-aspect">Override Aspect Ratio:</label>
+              <select id="video-aspect">
+                <option value="no">Default</option>
+                <option value="16:9">16:9 Widescreen</option>
+                <option value="4:3">4:3 Standard</option>
+                <option value="2.35:1">2.35:1 Cinematic</option>
+                <option value="1:1">1:1 Square</option>
+              </select>
+            </div>
+            <div class="control-group row-align">
+              <label for="video-rotate">Video Rotation:</label>
+              <select id="video-rotate">
+                <option value="0">0° (Normal)</option>
+                <option value="90">90° Clockwise</option>
+                <option value="180">180° Inverted</option>
+                <option value="270">270° Counter-Clockwise</option>
+              </select>
+            </div>
+            <div class="control-group">
+              <div class="row-space">
+                <label for="video-zoom">Video Zoom:</label>
+                <span id="video-zoom-val">1.0x</span>
+              </div>
+              <input type="range" id="video-zoom" min="1.0" max="5.0" step="0.1" value="1.0">
+            </div>
+            <div class="control-group">
+              <div class="row-space">
+                <label for="video-pan-x">Shift Horizontal (Pan X):</label>
+                <span id="video-pan-x-val">0.0</span>
+              </div>
+              <input type="range" id="video-pan-x" min="-1.0" max="1.0" step="0.05" value="0.0">
+            </div>
+            <div class="control-group">
+              <div class="row-space">
+                <label for="video-pan-y">Shift Vertical (Pan Y):</label>
+                <span id="video-pan-y-val">0.0</span>
+              </div>
+              <input type="range" id="video-pan-y" min="-1.0" max="1.0" step="0.05" value="0.0">
+            </div>
+            <div class="btn-group">
+              <button type="button" class="btn" id="btn-mirror-h">Flip Horizontal</button>
+              <button type="button" class="btn" id="btn-mirror-v">Flip Vertical</button>
+            </div>
+          </div>
+
+          <!-- Video filters list (10 video filters) -->
+          <div class="card">
+            <h3>Video Filters</h3>
+            <div class="filter-checklist">
+              <div class="checkbox-row-filter">
+                <input type="checkbox" id="vf-deinterlace">
+                <label for="vf-deinterlace">Deinterlacing</label>
+              </div>
+              <div class="checkbox-row-filter">
+                <input type="checkbox" id="vf-deband">
+                <label for="vf-deband">Deband (Anti-Banding)</label>
+              </div>
+              <div class="checkbox-row-filter">
+                <input type="checkbox" id="vf-denoise">
+                <label for="vf-denoise">Denoise (Noise Reduction)</label>
+              </div>
+              <div class="checkbox-row-filter">
+                <input type="checkbox" id="vf-sharpen">
+                <label for="vf-sharpen">Sharpen (Crispy Edges)</label>
+              </div>
+              <div class="checkbox-row-filter">
+                <input type="checkbox" id="vf-vignette">
+                <label for="vf-vignette">Vignette Frame</label>
+              </div>
+              <div class="checkbox-row-filter">
+                <input type="checkbox" id="vf-greyscale">
+                <label for="vf-greyscale">Black & White (Greyscale)</label>
+              </div>
+              <div class="checkbox-row-filter">
+                <input type="checkbox" id="vf-negative">
+                <label for="vf-negative">Negative Colors (Invert)</label>
+              </div>
+              <div class="checkbox-row-filter">
+                <input type="checkbox" id="vf-blur">
+                <label for="vf-blur">Box Blur Effect</label>
+              </div>
+              <div class="checkbox-row-filter">
+                <input type="checkbox" id="vf-sepia">
+                <label for="vf-sepia">Vintage Sepia Tone</label>
+              </div>
+              <div class="checkbox-row-filter">
+                <input type="checkbox" id="vf-night">
+                <label for="vf-night">Night Warm Mode (Blue Light Filter)</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Subtitles Tab -->
+      <section id="tab-subtitles" class="tab-panel">
+        <div class="sub-tab-header">
+          <h2>Subtitle Settings</h2>
+          <div class="sub-nav-tabs">
+            <button class="sub-tab-btn active" data-subtab="general">General</button>
+            <button class="sub-tab-btn" data-subtab="default-style">Default Style</button>
+            <button class="sub-tab-btn" data-subtab="misc">Misc</button>
+          </div>
+        </div>
+
+        <!-- General Subtitle settings (Image 3) -->
+        <div id="sub-panel-general" class="sub-tab-panel active">
+          <div class="panel-grid">
+            <div class="card">
+              <h3>Placement & Timing</h3>
+              <div class="control-group checkbox-row">
+                <input type="checkbox" id="sub-override-pos">
+                <label for="sub-override-pos">Override placement</label>
+              </div>
+              <div class="control-group pos-override-grid pos-override-inputs disabled-style">
+                <div class="field-col">
+                  <label for="sub-pos-h">Horizontal:</label>
+                  <div class="input-unit">
+                    <input type="number" id="sub-pos-h" min="0" max="100" value="50">
+                    <span class="unit">%</span>
+                  </div>
+                </div>
+                <div class="field-col">
+                  <label for="sub-pos-v">Vertical:</label>
+                  <div class="input-unit">
+                    <input type="number" id="sub-pos-v" min="0" max="100" value="90">
+                    <span class="unit">%</span>
+                  </div>
+                </div>
+              </div>
+              <div class="control-group row-align" style="margin-top:12px;">
+                <label for="sub-delay-step">Delay step:</label>
+                <div class="input-unit">
+                  <input type="number" id="sub-delay-step" min="50" max="5000" step="50" value="500">
+                  <span class="unit">ms</span>
+                </div>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Texture & Buffering Settings</h3>
+              <div class="control-group row-align">
+                <label for="sub-pics-buffer">Sub pictures to buffer:</label>
+                <input type="number" id="sub-pics-buffer" min="0" max="100" value="0">
+              </div>
+              <div class="control-group row-align">
+                <label for="sub-max-tex-res">Maximum texture resolution:</label>
+                <select id="sub-max-tex-res">
+                  <option value="auto">Auto</option>
+                  <option value="1920x1080">1920x1080</option>
+                  <option value="2560x1440">2560x1440</option>
+                  <option value="3840x2160">3840x2160</option>
+                </select>
+              </div>
+              <div class="control-group checkbox-row">
+                <input type="checkbox" id="sub-never-animate">
+                <label for="sub-never-animate">Never animate the subtitles</label>
+              </div>
+              <div class="control-group row-align indent">
+                <label for="sub-render-pct">Render at:</label>
+                <div class="input-unit">
+                  <input type="number" id="sub-render-pct" min="10" max="100" value="50">
+                  <span class="unit">% anim</span>
+                </div>
+              </div>
+              <div class="control-group row-align indent">
+                <label for="sub-animate-pct">Animate at:</label>
+                <div class="input-unit">
+                  <input type="number" id="sub-animate-pct" min="10" max="240" value="100">
+                  <span class="unit">% fps</span>
+                </div>
+              </div>
+              <div class="control-group checkbox-row" style="margin-top:10px;">
+                <input type="checkbox" id="sub-allow-dropping">
+                <label for="sub-allow-dropping">Allow dropping some subpictures if the queue is running late</label>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Renderer Layout</h3>
+              <div class="control-group checkbox-row">
+                <input type="checkbox" id="sub-aspect-comp" checked>
+                <label for="sub-aspect-comp">Apply aspect ratio compensation for anamorphic videos</label>
+              </div>
+              <div class="warning-box">
+                <p><strong>Warning:</strong> If you override and enable fullscreen antialiasing somewhere at your videocard's settings, subtitles aren't going to look any better but it will surely eat your CPU.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Default Style (Image 4) -->
+        <div id="sub-panel-default-style" class="sub-tab-panel">
+          <div class="panel-grid">
+            <!-- Left Card: Font and Margins -->
+            <div class="card">
+              <h3>Font & Alignment</h3>
+              <div class="control-group">
+                <label for="style-font">Font Family:</label>
+                <select id="style-font" class="full-width">
+                  <option value="Calibri">Calibri</option>
+                  <option value="Arial">Arial</option>
+                  <option value="Segoe UI">Segoe UI</option>
+                  <option value="Trebuchet MS">Trebuchet MS</option>
+                  <option value="Verdana">Verdana</option>
+                  <option value="Outfit">Outfit</option>
+                  <option value="sans-serif">Sans-serif</option>
+                </select>
+              </div>
+              <div class="control-group row-align">
+                <label for="style-charset">8-bit Character Set:</label>
+                <select id="style-charset">
+                  <option value="DEFAULT">DEFAULT (1)</option>
+                  <option value="UTF-8">UTF-8</option>
+                  <option value="ANSI">ANSI (0)</option>
+                </select>
+              </div>
+              <div class="control-group">
+                <label for="style-opentype-lang">OpenType Language:</label>
+                <select id="style-opentype-lang" class="full-width">
+                  <option value="">Default (None)</option>
+                  <option value="ENG">English</option>
+                  <option value="JPN">Japanese</option>
+                </select>
+              </div>
+              <div class="control-group row-align-sub">
+                <div>
+                  <label for="style-spacing">Spacing:</label>
+                  <input type="number" id="style-spacing" step="0.1" value="0.0" style="width:70px;">
+                </div>
+                <div>
+                  <label for="style-angle">Angle (z,°):</label>
+                  <input type="number" id="style-angle" min="-360" max="360" value="0" style="width:70px;">
+                </div>
+              </div>
+              <div class="control-group row-align-sub">
+                <div>
+                  <label for="style-scale-x">Scale (x,%):</label>
+                  <input type="number" id="style-scale-x" min="50" max="300" value="100" style="width:70px;">
+                </div>
+                <div>
+                  <label for="style-scale-y">Scale (y,%):</label>
+                  <input type="number" id="style-scale-y" min="50" max="300" value="100" style="width:70px;">
+                </div>
+              </div>
+            </div>
+
+            <!-- Alignment Grid and Margins -->
+            <div class="card">
+              <h3>Screen Alignment & Margins</h3>
+              <div class="alignment-margins-row">
+                <!-- 3x3 Grid -->
+                <div class="align-grid">
+                  <input type="radio" name="align-dot" id="align-7" value="7">
+                  <input type="radio" name="align-dot" id="align-8" value="8">
+                  <input type="radio" name="align-dot" id="align-9" value="9">
+                  
+                  <input type="radio" name="align-dot" id="align-4" value="4">
+                  <input type="radio" name="align-dot" id="align-5" value="5">
+                  <input type="radio" name="align-dot" id="align-6" value="6">
+                  
+                  <input type="radio" name="align-dot" id="align-1" value="1">
+                  <input type="radio" name="align-dot" id="align-2" value="2" checked>
+                  <input type="radio" name="align-dot" id="align-3" value="3">
+                </div>
+                <!-- Margin Inputs -->
+                <div class="margins-inputs">
+                  <div class="margin-field">
+                    <label for="style-margin-l">Left:</label>
+                    <input type="number" id="style-margin-l" value="20" min="0" max="300">
+                  </div>
+                  <div class="margin-field">
+                    <label for="style-margin-t">Top:</label>
+                    <input type="number" id="style-margin-t" value="20" min="0" max="300">
+                  </div>
+                  <div class="margin-field">
+                    <label for="style-margin-r">Right:</label>
+                    <input type="number" id="style-margin-r" value="20" min="0" max="300">
+                  </div>
+                  <div class="margin-field">
+                    <label for="style-margin-b">Bottom:</label>
+                    <input type="number" id="style-margin-b" value="20" min="0" max="300">
+                  </div>
+                </div>
+              </div>
+              <div class="control-group checkbox-row" style="margin-top:14px;">
+                <input type="checkbox" id="style-pos-relative">
+                <label for="style-pos-relative">Position subtitles relative to the video frame</label>
+              </div>
+            </div>
+
+            <!-- Outline and Shadow styles -->
+            <div class="card">
+              <h3>Border & Shadow Styles</h3>
+              <div class="radio-group-border">
+                <div class="radio-row">
+                  <input type="radio" name="border-style-radio" id="border-outline" checked>
+                  <label for="border-outline">Outline</label>
+                </div>
+                <div class="radio-row">
+                  <input type="radio" name="border-style-radio" id="border-opaque-box">
+                  <label for="border-opaque-box">Opaque box</label>
+                </div>
+              </div>
+              <div class="control-group row-align" style="margin-top:12px;">
+                <label for="style-border-width">Width:</label>
+                <input type="number" id="style-border-width" step="0.5" min="0" max="20" value="2.0">
+                <span class="unit">px</span>
+              </div>
+              <div class="control-group row-align">
+                <label for="style-shadow-width">Shadow:</label>
+                <input type="number" id="style-shadow-width" step="0.5" min="0" max="20" value="3.0">
+                <span class="unit">px</span>
+              </div>
+              <div class="control-group checkbox-row" style="margin-top:14px;">
+                <input type="checkbox" id="style-libass" checked>
+                <label for="style-libass">Use libass for SSA/ASS (highly recommended)</label>
+              </div>
+            </div>
+
+            <!-- Colors & Transparency -->
+            <div class="card">
+              <h3>Colors & Transparency</h3>
+              <div class="colors-layout">
+                <div class="color-control-item">
+                  <label for="style-color-pri">Primary:</label>
+                  <input type="color" id="style-color-pri" value="#FFFFFF">
+                  <input type="range" id="style-alpha-pri" min="0" max="100" value="100" title="Opacity">
+                  <span id="style-alpha-pri-txt">100%</span>
+                </div>
+                <div class="color-control-item">
+                  <label for="style-color-sec">Secondary:</label>
+                  <input type="color" id="style-color-sec" value="#FFFF00">
+                  <input type="range" id="style-alpha-sec" min="0" max="100" value="100" title="Opacity">
+                  <span id="style-alpha-sec-txt">100%</span>
+                </div>
+                <div class="color-control-item">
+                  <label for="style-color-out">Outline:</label>
+                  <input type="color" id="style-color-out" value="#000000">
+                  <input type="range" id="style-alpha-out" min="0" max="100" value="100" title="Opacity">
+                  <span id="style-alpha-out-txt">100%</span>
+                </div>
+                <div class="color-control-item">
+                  <label for="style-color-sha">Shadow:</label>
+                  <input type="color" id="style-color-sha" value="#000000">
+                  <input type="range" id="style-alpha-sha" min="0" max="100" value="50" title="Opacity">
+                  <span id="style-alpha-sha-txt">50%</span>
+                </div>
+              </div>
+              <div class="control-group checkbox-row" style="margin-top:12px;">
+                <input type="checkbox" id="style-link-alpha">
+                <label for="style-link-alpha">Link alpha channels</label>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Misc subtitle options (Image 5) -->
+        <div id="sub-panel-misc" class="sub-tab-panel">
+          <div class="panel-grid">
+            <div class="card">
+              <h3>Track Preferences</h3>
+              <div class="control-group checkbox-row">
+                <input type="checkbox" id="misc-prefer-default" checked>
+                <label for="misc-prefer-default">Prefer forced and/or default subtitles tracks</label>
+              </div>
+              <div class="control-group checkbox-row">
+                <input type="checkbox" id="misc-prefer-external" checked>
+                <label for="misc-prefer-external">Prefer external subtitles over embedded subtitles</label>
+              </div>
+              <div class="control-group checkbox-row">
+                <input type="checkbox" id="misc-ignore-embedded">
+                <label for="misc-ignore-embedded">Ignore embedded subtitles</label>
+              </div>
+            </div>
+
+            <div class="card">
+              <h3>Autoload Paths</h3>
+              <div class="control-group">
+                <div class="row-space">
+                  <label for="misc-autoload">Paths (separated by semicolons):</label>
+                  <button type="button" class="btn small" id="btn-autoload-reset">Reset</button>
+                </div>
+                <input type="text" id="misc-autoload" value=".\subtitles;.\subs" class="full-width">
+              </div>
+            </div>
+
+            <div class="card" style="grid-column: span 2;">
+              <h3>Online Subtitle Search</h3>
+              <div class="control-group checkbox-row">
+                <input type="checkbox" id="misc-online-enable">
+                <label for="misc-online-enable">Automatically search and download subtitles if none are found locally</label>
+              </div>
+              <div class="control-group checkbox-row indent">
+                <input type="checkbox" id="misc-online-hearing" disabled>
+                <label for="misc-online-hearing">Prefer subtitles for hearing impaired (when indicated by provider)</label>
+              </div>
+              <div class="control-group row-align indent" style="margin-top:8px;">
+                <label for="misc-online-ignore">Ignore files containing any of the following word(s):</label>
+                <input type="text" id="misc-online-ignore" style="flex:1;">
+              </div>
+              <div class="control-group row-align indent" style="margin-top:8px;">
+                <label for="misc-online-languages">Languages in order of preference:</label>
+                <input type="text" id="misc-online-languages" value="eng,chi,fre" style="flex:1;">
+              </div>
+
+              <!-- Providers Table -->
+              <div class="table-container" style="margin-top:14px;">
+                <table>
+                  <thead>
+                    <tr>
+                      <th style="width: 40px;">Select</th>
+                      <th>Provider</th>
+                      <th>Username</th>
+                      <th>Languages</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr>
+                      <td><input type="checkbox" checked id="provider-podnapisi"></td>
+                      <td>🌐 Podnapisi</td>
+                      <td>-</td>
+                      <td>ar,be,bg,bn,bs,ca,cs,da,de,el,en,es,et,fa,fi,fr,ga,he...</td>
+                    </tr>
+                    <tr>
+                      <td><input type="checkbox" id="provider-opensubtitles"></td>
+                      <td>🌐 OpenSubtitles</td>
+                      <td><input type="text" value="Guest" style="width:100px; height:20px; padding:2px;"></td>
+                      <td>ab,af,am,an,ar,as,at,az,be,bg,bn,br,bs,ca,cs,cy...</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="control-group checkbox-row" style="margin-top:12px;">
+                <input type="checkbox" id="misc-online-save" checked>
+                <label for="misc-online-save">Automatically save downloaded subtitles to the first autoload path folder</label>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Bottom Action Bar -->
+  <footer class="footer-actions">
+    <button type="button" class="btn btn-secondary" id="btn-cancel">Cancel</button>
+    <button type="button" class="btn btn-primary" id="btn-ok">OK</button>
+    <button type="button" class="btn btn-apply" id="btn-apply">Apply</button>
+  </footer>
+
+  <script type="module" src="js/options.js"></script>
+</body>
+</html>
