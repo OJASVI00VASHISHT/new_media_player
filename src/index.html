@@ -255,6 +255,37 @@
         </div>
       </div>
 
+      <!-- Audio-only placeholder card -->
+      <div id="audio-placeholder" class="audio-placeholder hidden">
+        <div class="audio-card">
+          <div class="audio-disc-container">
+            <div class="audio-disc">
+              <svg viewBox="0 0 100 100" class="disc-svg">
+                <circle cx="50" cy="50" r="48" fill="#111118" stroke="url(#dropGrad)" stroke-width="1.5"/>
+                <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="2"/>
+                <circle cx="50" cy="50" r="28" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="2"/>
+                <circle cx="50" cy="50" r="18" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="2"/>
+                <circle cx="50" cy="50" r="10" fill="#0A0A0F"/>
+                <path d="M46 44 A 8 8 0 0 1 54 44" stroke="var(--cyan)" stroke-width="2" fill="none"/>
+              </svg>
+              <div class="music-icon">🎵</div>
+            </div>
+          </div>
+          <div class="audio-info">
+            <div class="audio-title" id="audio-title">Track Name</div>
+            <div class="audio-mode">Audio Only Playback</div>
+          </div>
+          <div class="audio-waves">
+            <span class="wave-bar bar-1"></span>
+            <span class="wave-bar bar-2"></span>
+            <span class="wave-bar bar-3"></span>
+            <span class="wave-bar bar-4"></span>
+            <span class="wave-bar bar-5"></span>
+            <span class="wave-bar bar-6"></span>
+          </div>
+        </div>
+      </div>
+
       <!-- mpv renders into this element (via wid) -->
       <div id="mpv-container" class="mpv-container hidden"></div>
 
