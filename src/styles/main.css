@@ -1100,13 +1100,14 @@ body.theme-emerald {
   position: relative;
   max-width: 100%;
   max-height: 100%;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   transition: transform 0.15s ease;
 }
 
 #edit-preview-img {
+  display: block;
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
