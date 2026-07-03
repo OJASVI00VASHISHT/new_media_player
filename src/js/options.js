@@ -471,9 +471,10 @@ async function applySettings() {
     await setProp('af', afFilters.join(','));
 
     // Video Renderer & VSync
+    // NOTE: 'vo' (video output driver) cannot be changed at runtime when mpv is embedded
+    // via the wid/HWND approach — doing so causes mpv to detach from the window and blank
+    // the video output. It is set once at startup in mpv.rs.
     const hwdec = document.getElementById('video-hwdec').value;
-    const vo = document.getElementById('video-renderer').value;
-    await setProp('vo', vo);
 
     const sync = document.getElementById('video-sync').value;
     await setProp('video-sync', sync);

@@ -203,8 +203,8 @@
               </select>
             </div>
             <div class="control-group row-align">
-              <label for="video-renderer">Video Renderer:</label>
-              <select id="video-renderer">
+              <label for="video-renderer">Video Renderer: <span style="font-size:10px;opacity:0.5">(fixed at startup)</span></label>
+              <select id="video-renderer" disabled title="Video renderer cannot be changed while the player is running. Restart the app to change this.">
                 <option value="gpu">GPU Renderer (Standard)</option>
                 <option value="gpu-next">GPU Next (Experimental)</option>
               </select>
