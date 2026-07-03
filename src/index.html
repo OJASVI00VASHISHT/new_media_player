@@ -552,7 +552,7 @@
         </button>
       </div>
 
-      <!-- Right: Action Buttons -->
+      <!-- Right: Action Buttons + Window Controls -->
       <div class="edit-action-btns">
         <div class="save-dropdown-container">
           <button id="btn-edit-save-options" class="edit-primary-btn">
@@ -576,6 +576,19 @@
           </div>
         </div>
         <button id="btn-edit-cancel" class="edit-secondary-btn">Cancel</button>
+
+        <!-- Window controls (same as title bar) -->
+        <div class="edit-win-controls">
+          <button class="edit-win-btn" id="edit-btn-minimize" title="Minimize">
+            <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+          </button>
+          <button class="edit-win-btn" id="edit-btn-maximize" title="Maximize">
+            <svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+          </button>
+          <button class="edit-win-btn edit-win-btn-close" id="edit-btn-close" title="Close">
+            <svg width="10" height="10" viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" stroke-width="1.2"/><line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1.2"/></svg>
+          </button>
+        </div>
       </div>
     </div>
 

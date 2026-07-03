@@ -412,6 +412,20 @@ document.addEventListener('click', () => {
 // Cancel button
 document.getElementById('btn-edit-cancel').addEventListener('click', exitEditMode);
 
+// Edit mode window controls (minimize / maximize / close)
+(function initEditWindowControls() {
+  const { getCurrentWindow } = window.__TAURI__.window;
+  const win = getCurrentWindow();
+
+  document.getElementById('edit-btn-minimize')?.addEventListener('click', () => win.minimize());
+  document.getElementById('edit-btn-maximize')?.addEventListener('click', async () => {
+    const maximized = await win.isMaximized();
+    maximized ? win.unmaximize() : win.maximize();
+  });
+  document.getElementById('edit-btn-close')?.addEventListener('click', () => win.close());
+})();
+
+
 // Undo / Redo
 const applyHistoryState = () => {
   const state = history[historyIndex];

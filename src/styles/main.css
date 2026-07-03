@@ -976,6 +976,37 @@ body.theme-emerald {
   gap: 12px;
 }
 
+/* Edit window controls (min/max/close) */
+.edit-win-controls {
+  display: flex;
+  align-items: center;
+  margin-left: 8px;
+  border-left: 1px solid var(--ctrl-border);
+  padding-left: 8px;
+  gap: 0;
+}
+
+.edit-win-btn {
+  width: 44px;
+  height: var(--title-bar-h);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-secondary);
+  transition: background var(--t-fast), color var(--t-fast);
+  border-radius: 0;
+}
+
+.edit-win-btn:hover {
+  background: var(--ctrl-hover);
+  color: var(--text-primary);
+}
+
+.edit-win-btn-close:hover {
+  background: rgba(239, 68, 68, 0.85);
+  color: white;
+}
+
 .edit-primary-btn {
   background: var(--grad);
   color: #fff;

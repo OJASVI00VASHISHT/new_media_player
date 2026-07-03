@@ -31,7 +31,7 @@ import {
 } from './player.js';
 
 import { showToast } from './ui.js';
-import { enterEditMode } from './edit-mode.js';
+import { enterEditMode, editState } from './edit-mode.js';
 
 // ── Init Window Controls (minimize / maximize / close) ────────
 initWindowControls();
@@ -104,6 +104,8 @@ document.addEventListener('drop', async (e) => {
 document.addEventListener('keydown', async (e) => {
   // Don't fire when typing in an input
   if (e.target.tagName === 'INPUT') return;
+  // Don't fire player shortcuts when edit mode is active
+  if (editState.active) return;
 
   switch (e.key) {
     case ' ':
