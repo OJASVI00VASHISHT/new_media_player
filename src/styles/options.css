@@ -589,26 +589,38 @@ input[type="color"] {
   accent-color: var(--cyan);
 }
 
+.alignment-margins-row {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 .margins-inputs {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 8px;
+  gap: 6px 8px;
   flex: 1;
+  min-width: 0;
 }
 
 .margin-field {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 8px;
+  gap: 4px;
+  min-width: 0;
 }
 
 .margin-field label {
   font-size: 11px;
+  color: var(--text-secondary);
+  min-width: 36px;
 }
 
 .margin-field input {
-  width: 60px;
+  width: 48px !important;
+  padding: 4px 4px !important;
+  font-size: 12px !important;
+  text-align: center;
 }
 
 .radio-group-border {

@@ -402,8 +402,69 @@ function togglePosInputs() {
   }
 }
 
+// ── Number Input Validation & Clamping ─────────────────────────
+function clampAllNumberInputs() {
+  document.querySelectorAll('input[type="number"]').forEach(input => {
+    const minAttr = input.getAttribute('min');
+    const maxAttr = input.getAttribute('max');
+    if (input.value === '') return;
+    
+    let val = parseFloat(input.value);
+    if (isNaN(val)) return;
+
+    if (maxAttr !== null && maxAttr !== '') {
+      const max = parseFloat(maxAttr);
+      if (val > max) {
+        input.value = max;
+        val = max;
+      }
+    }
+    if (minAttr !== null && minAttr !== '') {
+      const min = parseFloat(minAttr);
+      if (val < min) {
+        input.value = min;
+        val = min;
+      }
+    }
+  });
+}
+
+// Auto-clamp input values as the user types/edits numbers
+document.addEventListener('input', (e) => {
+  if (e.target.matches('input[type="number"]')) {
+    const maxAttr = e.target.getAttribute('max');
+    if (maxAttr !== null && maxAttr !== '' && e.target.value !== '') {
+      const max = parseFloat(maxAttr);
+      const val = parseFloat(e.target.value);
+      if (!isNaN(val) && val > max) {
+        e.target.value = max;
+      }
+    }
+  }
+});
+
+document.addEventListener('change', (e) => {
+  if (e.target.matches('input[type="number"]')) {
+    const minAttr = e.target.getAttribute('min');
+    const maxAttr = e.target.getAttribute('max');
+    if (e.target.value === '') return;
+    let val = parseFloat(e.target.value);
+    if (isNaN(val)) return;
+
+    if (maxAttr !== null && maxAttr !== '') {
+      const max = parseFloat(maxAttr);
+      if (val > max) e.target.value = max;
+    }
+    if (minAttr !== null && minAttr !== '') {
+      const min = parseFloat(minAttr);
+      if (val < min) e.target.value = min;
+    }
+  }
+});
+
 // ── Save & Apply Logic ────────────────────────────────────────
 async function applySettings() {
+  clampAllNumberInputs();
   try {
     const setProp = async (name, value) => {
       try {
