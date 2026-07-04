@@ -297,7 +297,7 @@ function applyStateToPreview() {
   if (vignetteOverlay) {
     if (editState.vignette > 0) {
       let opacity = editState.vignette / 100;
-      vignetteOverlay.style.background = `radial-gradient(circle, transparent 40%, rgba(0,0,0,${opacity}) 100%)`;
+      vignetteOverlay.style.background = `radial-gradient(ellipse farthest-corner at center, rgba(0,0,0,0) 40%, rgba(0,0,0,${opacity}) 100%)`;
       vignetteOverlay.style.opacity = 1;
     } else {
       vignetteOverlay.style.opacity = 0;
@@ -354,7 +354,7 @@ sliderArbitraryRotation.addEventListener('change', () => {
 });
 
 // Adjustments sliders
-const bindSlider = (sliderEl, valEl, prop) => {
+const bindSlider = (sliderEl, valEl, prop, btnId) => {
   sliderEl.addEventListener('input', (e) => {
     editState[prop] = parseInt(e.target.value);
     valEl.textContent = e.target.value;
@@ -364,14 +364,27 @@ const bindSlider = (sliderEl, valEl, prop) => {
   sliderEl.addEventListener('change', () => {
     pushHistory();
   });
+
+  if (btnId) {
+    const btn = document.getElementById(btnId);
+    if (btn) {
+      btn.addEventListener('click', () => {
+        editState[prop] = 0;
+        sliderEl.value = 0;
+        valEl.textContent = '0';
+        pushHistory();
+        applyStateToPreview();
+      });
+    }
+  }
 };
 
-bindSlider(sliderBrightness, valBrightness, 'brightness');
-bindSlider(sliderContrast, valContrast, 'contrast');
-bindSlider(sliderExposure, valExposure, 'exposure');
-bindSlider(sliderHighlights, valHighlights, 'highlights');
-bindSlider(sliderShadows, valShadows, 'shadows');
-bindSlider(sliderVignette, valVignette, 'vignette');
+bindSlider(sliderBrightness, valBrightness, 'brightness', 'btn-adjust-brightness');
+bindSlider(sliderContrast, valContrast, 'contrast', 'btn-adjust-contrast');
+bindSlider(sliderExposure, valExposure, 'exposure', 'btn-adjust-exposure');
+bindSlider(sliderHighlights, valHighlights, 'highlights', 'btn-adjust-highlights');
+bindSlider(sliderShadows, valShadows, 'shadows', 'btn-adjust-shadows');
+bindSlider(sliderVignette, valVignette, 'vignette', 'btn-adjust-vignette');
 
 // Reset Adjustments
 document.getElementById('btn-reset-adjust').addEventListener('click', () => {
@@ -411,6 +424,20 @@ document.addEventListener('click', () => {
 
 // Cancel button
 document.getElementById('btn-edit-cancel').addEventListener('click', exitEditMode);
+
+// Edit mode window controls (minimize / maximize / close)
+(function initEditWindowControls() {
+  const { getCurrentWindow } = window.__TAURI__.window;
+  const win = getCurrentWindow();
+
+  document.getElementById('edit-btn-minimize')?.addEventListener('click', () => win.minimize());
+  document.getElementById('edit-btn-maximize')?.addEventListener('click', async () => {
+    const maximized = await win.isMaximized();
+    maximized ? win.unmaximize() : win.maximize();
+  });
+  document.getElementById('edit-btn-close')?.addEventListener('click', () => win.close());
+})();
+
 
 // Undo / Redo
 const applyHistoryState = () => {

@@ -37,6 +37,8 @@ export let currentFile = null;
 const dropZone       = document.getElementById('drop-zone');
 const mpvContainer   = document.getElementById('mpv-container');
 const overlay        = document.getElementById('overlay');
+const audioPlaceholder = document.getElementById('audio-placeholder');
+const audioTitle     = document.getElementById('audio-title');
 const playIcon       = document.getElementById('play-icon');
 const pauseIcon      = document.getElementById('pause-icon');
 const overlayPlayBtn = document.getElementById('overlay-play-btn');
@@ -188,6 +190,9 @@ function setPlaying(playing) {
   isPlaying = playing;
   playIcon.classList.toggle('hidden', playing);
   pauseIcon.classList.toggle('hidden', !playing);
+  if (audioPlaceholder) {
+    audioPlaceholder.classList.toggle('playing', playing);
+  }
 }
 
 // ── Volume helpers ───────────────────────────────────────────
@@ -230,7 +235,23 @@ export async function muteToggle() {
 
 function showPlayer(filename) {
   dropZone.classList.remove('active');
-  mpvContainer.classList.remove('hidden');
+  
+  const ext = filename ? filename.split('.').pop().toLowerCase() : '';
+  const isAudio = ['mp3', 'flac', 'wav', 'm4a', 'ogg', 'wma', 'aac', 'alac', 'opus'].includes(ext);
+  
+  if (isAudio) {
+    mpvContainer.classList.add('hidden');
+    if (audioPlaceholder) {
+      audioPlaceholder.classList.remove('hidden');
+      audioTitle.textContent = filename || 'Audio Track';
+    }
+  } else {
+    mpvContainer.classList.remove('hidden');
+    if (audioPlaceholder) {
+      audioPlaceholder.classList.add('hidden');
+    }
+  }
+  
   titleBarFile.textContent = filename || '';
   document.title = `${filename || ''} — Nova Player`;
 }
@@ -500,6 +521,9 @@ export async function stopVideo() {
     document.title = 'Nova Player';
     dropZone.classList.add('active');
     mpvContainer.classList.add('hidden');
+    if (audioPlaceholder) {
+      audioPlaceholder.classList.add('hidden');
+    }
     const infoDisplay = document.getElementById('file-info-display');
     if (infoDisplay) infoDisplay.classList.add('hidden');
     showToast('■ Media stopped');

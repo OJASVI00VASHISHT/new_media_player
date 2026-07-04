@@ -88,12 +88,30 @@
       <!-- Top Menu Bar -->
       <nav class="top-menu-bar" id="top-menu-bar">
         <div class="menu-trigger-container">
-          <button class="menu-trigger" data-menu="media">Media</button>
-          <div class="menu-dropdown hidden" id="dropdown-media">
-            <div class="menu-item" id="menu-media-open"><span class="menu-icon">📂</span><span class="menu-text">Open File...</span><span class="menu-shortcut">Ctrl+O</span></div>
-            <div class="menu-item" id="menu-media-close"><span class="menu-icon">❌</span><span class="menu-text">Close Media</span></div>
+          <button class="menu-trigger" data-menu="options">Options</button>
+          <div class="menu-dropdown hidden" id="dropdown-options">
+            <div class="menu-item" id="menu-options-dialog"><span class="menu-icon">⚙️</span><span class="menu-text">Options...</span></div>
+            <div class="menu-item" id="menu-options-styles"><span class="menu-icon">🎨</span><span class="menu-text">Styles...</span></div>
+            <div class="menu-item" id="menu-options-reload"><span class="menu-icon">🔄</span><span class="menu-text">Reload Subtitles</span></div>
+            <div class="menu-item" id="menu-options-hide"><span class="menu-icon"></span><span class="menu-text">Hide Subtitles</span></div>
+            <div class="menu-item" id="menu-options-override-default"><span class="menu-icon"></span><span class="menu-text">Override Default Style</span></div>
+            <div class="menu-item" id="menu-options-override-all"><span class="menu-icon"></span><span class="menu-text">Override All Styles</span></div>
             <div class="menu-divider"></div>
-            <div class="menu-item" id="menu-media-exit"><span class="menu-icon">🚪</span><span class="menu-text">Exit</span></div>
+            <div class="menu-item-parent" id="menu-options-tracks-parent">
+              <div class="menu-item">
+                <span class="menu-icon">🗣️</span>
+                <span class="menu-text">Subtitle Tracks</span>
+                <span class="menu-arrow">▶</span>
+              </div>
+              <div class="menu-submenu" id="menu-options-tracks-list">
+                <div class="menu-item disabled">No subtitles</div>
+              </div>
+            </div>
+            <div class="menu-divider"></div>
+            <div class="menu-item" id="menu-options-open"><span class="menu-icon">📂</span><span class="menu-text">Open File...</span><span class="menu-shortcut">Ctrl+O</span></div>
+            <div class="menu-item" id="menu-options-close"><span class="menu-icon">❌</span><span class="menu-text">Close Media</span></div>
+            <div class="menu-divider"></div>
+            <div class="menu-item" id="menu-options-exit"><span class="menu-icon">🚪</span><span class="menu-text">Exit</span></div>
           </div>
         </div>
         <div class="menu-trigger-container">
@@ -233,6 +251,37 @@
           <p class="drop-subtitle">or click Open below</p>
           <div class="drop-formats">
             <span>MP4</span><span>MKV</span><span>AVI</span><span>MOV</span><span>WEBM</span><span>MP3</span><span>FLAC</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Audio-only placeholder card -->
+      <div id="audio-placeholder" class="audio-placeholder hidden">
+        <div class="audio-card">
+          <div class="audio-disc-container">
+            <div class="audio-disc">
+              <svg viewBox="0 0 100 100" class="disc-svg">
+                <circle cx="50" cy="50" r="48" fill="#111118" stroke="url(#dropGrad)" stroke-width="1.5"/>
+                <circle cx="50" cy="50" r="38" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="2"/>
+                <circle cx="50" cy="50" r="28" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="2"/>
+                <circle cx="50" cy="50" r="18" fill="none" stroke="rgba(255,255,255,0.03)" stroke-width="2"/>
+                <circle cx="50" cy="50" r="10" fill="#0A0A0F"/>
+                <path d="M46 44 A 8 8 0 0 1 54 44" stroke="var(--cyan)" stroke-width="2" fill="none"/>
+              </svg>
+              <div class="music-icon">🎵</div>
+            </div>
+          </div>
+          <div class="audio-info">
+            <div class="audio-title" id="audio-title">Track Name</div>
+            <div class="audio-mode">Audio Only Playback</div>
+          </div>
+          <div class="audio-waves">
+            <span class="wave-bar bar-1"></span>
+            <span class="wave-bar bar-2"></span>
+            <span class="wave-bar bar-3"></span>
+            <span class="wave-bar bar-4"></span>
+            <span class="wave-bar bar-5"></span>
+            <span class="wave-bar bar-6"></span>
           </div>
         </div>
       </div>
@@ -503,7 +552,7 @@
         </button>
       </div>
 
-      <!-- Right: Action Buttons -->
+      <!-- Right: Action Buttons + Window Controls -->
       <div class="edit-action-btns">
         <div class="save-dropdown-container">
           <button id="btn-edit-save-options" class="edit-primary-btn">
@@ -527,6 +576,19 @@
           </div>
         </div>
         <button id="btn-edit-cancel" class="edit-secondary-btn">Cancel</button>
+
+        <!-- Window controls (same as title bar) -->
+        <div class="edit-win-controls">
+          <button class="edit-win-btn" id="edit-btn-minimize" title="Minimize">
+            <svg width="10" height="1" viewBox="0 0 10 1"><rect width="10" height="1" fill="currentColor"/></svg>
+          </button>
+          <button class="edit-win-btn" id="edit-btn-maximize" title="Maximize">
+            <svg width="10" height="10" viewBox="0 0 10 10"><rect x="0.5" y="0.5" width="9" height="9" fill="none" stroke="currentColor" stroke-width="1"/></svg>
+          </button>
+          <button class="edit-win-btn edit-win-btn-close" id="edit-btn-close" title="Close">
+            <svg width="10" height="10" viewBox="0 0 10 10"><line x1="0" y1="0" x2="10" y2="10" stroke="currentColor" stroke-width="1.2"/><line x1="10" y1="0" x2="0" y2="10" stroke="currentColor" stroke-width="1.2"/></svg>
+          </button>
+        </div>
       </div>
     </div>
 
@@ -578,7 +640,7 @@
           
           <div class="adjust-control">
             <div class="adjust-label-row">
-              <span>☀️ Brightness</span>
+              <button type="button" id="btn-adjust-brightness" class="adjust-label-btn" title="Reset Brightness to 0">☀️ Brightness</button>
               <span id="val-brightness">0</span>
             </div>
             <input type="range" id="slider-brightness" min="-100" max="100" value="0" />
@@ -586,7 +648,7 @@
 
           <div class="adjust-control">
             <div class="adjust-label-row">
-              <span>🌓 Contrast</span>
+              <button type="button" id="btn-adjust-contrast" class="adjust-label-btn" title="Reset Contrast to 0">🌓 Contrast</button>
               <span id="val-contrast">0</span>
             </div>
             <input type="range" id="slider-contrast" min="-100" max="100" value="0" />
@@ -594,7 +656,7 @@
 
           <div class="adjust-control">
             <div class="adjust-label-row">
-              <span>💡 Exposure</span>
+              <button type="button" id="btn-adjust-exposure" class="adjust-label-btn" title="Reset Exposure to 0">💡 Exposure</button>
               <span id="val-exposure">0</span>
             </div>
             <input type="range" id="slider-exposure" min="-100" max="100" value="0" />
@@ -602,7 +664,7 @@
 
           <div class="adjust-control">
             <div class="adjust-label-row">
-              <span>🔆 Highlights</span>
+              <button type="button" id="btn-adjust-highlights" class="adjust-label-btn" title="Reset Highlights to 0">🔆 Highlights</button>
               <span id="val-highlights">0</span>
             </div>
             <input type="range" id="slider-highlights" min="-100" max="100" value="0" />
@@ -610,7 +672,7 @@
 
           <div class="adjust-control">
             <div class="adjust-label-row">
-              <span>📉 Shadows</span>
+              <button type="button" id="btn-adjust-shadows" class="adjust-label-btn" title="Reset Shadows to 0">📉 Shadows</button>
               <span id="val-shadows">0</span>
             </div>
             <input type="range" id="slider-shadows" min="-100" max="100" value="0" />
@@ -618,7 +680,7 @@
 
           <div class="adjust-control">
             <div class="adjust-label-row">
-              <span>🕳️ Vignette</span>
+              <button type="button" id="btn-adjust-vignette" class="adjust-label-btn" title="Reset Vignette to 0">🕳️ Vignette</button>
               <span id="val-vignette">0</span>
             </div>
             <input type="range" id="slider-vignette" min="0" max="100" value="0" />
