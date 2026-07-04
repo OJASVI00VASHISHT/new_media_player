@@ -297,7 +297,7 @@ function applyStateToPreview() {
   if (vignetteOverlay) {
     if (editState.vignette > 0) {
       let opacity = editState.vignette / 100;
-      vignetteOverlay.style.background = `radial-gradient(ellipse farthest-corner at center, rgba(0,0,0,0) 30%, rgba(0,0,0,${opacity}) 100%)`;
+      vignetteOverlay.style.background = `radial-gradient(ellipse farthest-corner at center, rgba(0,0,0,0) 40%, rgba(0,0,0,${opacity}) 100%)`;
       vignetteOverlay.style.opacity = 1;
     } else {
       vignetteOverlay.style.opacity = 0;
