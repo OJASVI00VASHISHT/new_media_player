@@ -137,9 +137,13 @@ export function enterEditMode(filePath) {
     thumb.style.backgroundImage = `url('${assetUrl}')`;
   });
   
-  // Retrieve image dimensions
+  // Retrieve image dimensions and re-apply state once pixels are available.
+  // applyStateToPreview() is called synchronously below (before load) so that
+  // transforms/filters are applied immediately; the onload re-call is what
+  // correctly sizes the vignette overlay once naturalWidth/Height are known.
   previewImg.onload = () => {
     dimensionsDisplay.textContent = `${previewImg.naturalWidth} x ${previewImg.naturalHeight}`;
+    applyStateToPreview();
   };
   
   // Reset form inputs
@@ -225,30 +229,40 @@ function applyStateToPreview() {
   if (imageArea && previewImg) {
     const areaW = imageArea.clientWidth - 64; // 32px padding on each side
     const areaH = imageArea.clientHeight - 64;
-    const imgW = previewImg.offsetWidth;
-    const imgH = previewImg.offsetHeight;
-    
-    if (imgW > 0 && imgH > 0 && areaW > 0 && areaH > 0) {
-      const rad = (totalDeg * Math.PI) / 180;
-      const cos = Math.abs(Math.cos(rad));
-      const sin = Math.abs(Math.sin(rad));
+    const natW  = previewImg.naturalWidth;
+    const natH  = previewImg.naturalHeight;
+
+    // Use naturalWidth/naturalHeight (always the true pixel count regardless of
+    // CSS layout) to compute an unambiguous display size, then set it explicitly
+    // on the element.  This removes the inline-flex/max-width:100% circularity
+    // that was causing offsetWidth to differ from the visible image on portrait
+    // images and making the vignette overlay cover the wrong rectangle.
+    if (natW > 0 && natH > 0 && areaW > 0 && areaH > 0) {
+      const baseScale = Math.min(areaW / natW, areaH / natH);
+      const imgW = Math.round(natW * baseScale);
+      const imgH = Math.round(natH * baseScale);
+
+      // Explicitly lock the image element to its fitted pixel size.
+      previewImg.style.width  = imgW + 'px';
+      previewImg.style.height = imgH + 'px';
+
+      // Pin the vignette overlay to the same box.
+      if (vignetteOverlay) {
+        vignetteOverlay.style.width  = imgW + 'px';
+        vignetteOverlay.style.height = imgH + 'px';
+      }
+
+      // fitScale now only accounts for the rotated bounding box overhang.
+      const rad  = (totalDeg * Math.PI) / 180;
+      const cos  = Math.abs(Math.cos(rad));
+      const sin  = Math.abs(Math.sin(rad));
       const rotW = imgW * cos + imgH * sin;
       const rotH = imgW * sin + imgH * cos;
-      
       fitScale = Math.min(areaW / rotW, areaH / rotH);
     }
-    
+
     // Toggle can-pan class on image area depending on user zoom
     imageArea.classList.toggle('can-pan', editState.zoom > 100);
-
-    // Pin vignette overlay to the actual rendered image box.
-    // offsetWidth/offsetHeight give the true layout size (pre-transform),
-    // which is what we need because the overlay lives inside the same
-    // transformed container as the image.
-    if (vignetteOverlay && imgW > 0 && imgH > 0) {
-      vignetteOverlay.style.width  = imgW + 'px';
-      vignetteOverlay.style.height = imgH + 'px';
-    }
   }
   
   let finalScale = fitScale * (editState.zoom / 100);
