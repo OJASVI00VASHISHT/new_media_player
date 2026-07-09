@@ -240,6 +240,15 @@ function applyStateToPreview() {
     
     // Toggle can-pan class on image area depending on user zoom
     imageArea.classList.toggle('can-pan', editState.zoom > 100);
+
+    // Pin vignette overlay to the actual rendered image box.
+    // offsetWidth/offsetHeight give the true layout size (pre-transform),
+    // which is what we need because the overlay lives inside the same
+    // transformed container as the image.
+    if (vignetteOverlay && imgW > 0 && imgH > 0) {
+      vignetteOverlay.style.width  = imgW + 'px';
+      vignetteOverlay.style.height = imgH + 'px';
+    }
   }
   
   let finalScale = fitScale * (editState.zoom / 100);
